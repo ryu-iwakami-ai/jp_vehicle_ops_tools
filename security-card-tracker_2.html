@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Security Card Tracker</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+:root{
+  --bg:#f5f4f0;--surface:#fff;--surface2:#f0ede8;--border:#e2ddd8;--border2:#ccc8c2;
+  --text:#1a1916;--text2:#6b6760;--text3:#9e9b96;
+  --green:#1a7a4a;--green-bg:#eaf4ee;--green-border:#b6dfc5;
+  --red:#b83232;--red-bg:#fbeaea;--red-border:#f0b8b8;
+  --amber:#7a5200;--amber-bg:#fdf3dc;--amber-border:#f0d080;
+  --blue:#1a4fa0;--blue-bg:#eaf0fb;--blue-border:#b0c8f0;
+  --r:12px;--r-sm:8px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.5;overscroll-behavior:none}
+
+/* ── HEADER ── */
+header{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:0 1.25rem;height:56px;display:flex;align-items:center;
+  justify-content:space-between;position:sticky;top:0;z-index:50;
+}
+.logo{display:flex;align-items:center;gap:9px;font-weight:600;font-size:15px;letter-spacing:-0.01em;min-width:0}
+.logo-icon{width:30px;height:30px;background:var(--text);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-icon svg{width:17px;height:17px}
+.logo-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.clock{font-family:'DM Mono',monospace;font-size:12px;color:var(--text2);white-space:nowrap;flex-shrink:0;margin-left:8px}
+
+/* ── SEARCH BAR ── */
+.search-bar{padding:.75rem 1.25rem;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:56px;z-index:40}
+.search-wrap{position:relative}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text3);pointer-events:none}
+#search{width:100%;padding:10px 40px 10px 38px;font-family:'DM Sans',sans-serif;font-size:15px;background:var(--surface2);border:1px solid var(--border);border-radius:99px;color:var(--text);outline:none;transition:border-color .15s}
+#search:focus{border-color:var(--border2);background:var(--surface)}
+.search-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--text3);border:none;border-radius:50%;width:20px;height:20px;display:none;align-items:center;justify-content:center;cursor:pointer;padding:0;color:#fff;font-size:12px}
+.search-clear.show{display:flex}
+
+/* ── STATS ── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:.875rem 1.25rem}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:.625rem .75rem;text-align:center}
+.stat-label{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:3px}
+.stat-num{font-size:22px;font-weight:600;letter-spacing:-0.03em;font-family:'DM Mono',monospace}
+.num-red{color:var(--red)}.num-green{color:var(--green)}.num-amber{color:var(--amber)}.num-blue{color:var(--blue)}
+
+/* ── FILTER TABS ── */
+.filter-row{display:flex;gap:6px;padding:0 1.25rem .875rem;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.filter-row::-webkit-scrollbar{display:none}
+.ftab{flex-shrink:0;padding:7px 14px;border-radius:99px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);border:1px solid var(--border);background:var(--surface);transition:all .12s;white-space:nowrap}
+.ftab.active{background:var(--text);color:#fff;border-color:var(--text)}
+.ftab.active-red{background:var(--red-bg);color:var(--red);border-color:var(--red-border)}
+.ftab.active-green{background:var(--green-bg);color:var(--green);border-color:var(--green-border)}
+.ftab.active-amber{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-border)}
+
+/* ── SECTION DIVIDERS ── */
+.section-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);padding:6px 1.25rem 4px;background:var(--bg)}
+
+/* ── CARD LIST ── */
+.cards-list{padding:0 1.25rem;display:flex;flex-direction:column;gap:8px;padding-bottom:calc(1.5rem + var(--safe-bottom))}
+.card-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;display:flex;align-items:center;gap:12px;transition:background .1s;cursor:default}
+.card-item:active{background:var(--surface2)}
+.card-left{flex:1;min-width:0}
+.card-num{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:var(--text);margin-bottom:3px}
+.card-holder{font-size:14px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-meta{font-size:12px;color:var(--text2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:3px 9px;border-radius:99px;white-space:nowrap}
+.b-loaned{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.b-storage{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.b-lost{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+.b-returned{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
+.b-unclear{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+
+/* ── ACTION BUTTONS on cards ── */
+.card-btn{padding:7px 16px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;border-radius:99px;border:1px solid;cursor:pointer;white-space:nowrap;transition:opacity .12s;min-width:90px;text-align:center}
+.card-btn:active{opacity:.7}
+.card-btn-out{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}
+.card-btn-in{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+.card-btn-edit{background:var(--surface2);border-color:var(--border);color:var(--text2)}
+
+.empty-state{text-align:center;padding:3rem 1.25rem;color:var(--text3);font-size:14px}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:50;padding-bottom:var(--safe-bottom)}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 8px;gap:3px;border:none;background:transparent;cursor:pointer;color:var(--text3);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;transition:color .12s}
+.bnav-btn.active{color:var(--text)}
+.bnav-btn svg{width:20px;height:20px}
+.bnav-icon{width:20px;height:20px}
+
+/* ── BOTTOM SHEET MODALS ── */
+.sheet-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:flex-end;justify-content:center}
+.sheet-overlay.open{display:flex}
+.sheet{background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:560px;padding:0 1.25rem 0;animation:sheet-up .22s ease;max-height:92vh;display:flex;flex-direction:column}
+@keyframes sheet-up{from{transform:translateY(40px);opacity:.6}to{transform:translateY(0);opacity:1}}
+.sheet-handle{width:36px;height:4px;background:var(--border2);border-radius:99px;margin:12px auto 0}
+.sheet-header{padding:1rem 0 .75rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.sheet-title{font-size:17px;font-weight:600;letter-spacing:-0.01em}
+.sheet-close{width:30px;height:30px;border-radius:50%;background:var(--surface2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:18px;flex-shrink:0}
+.sheet-body{overflow-y:auto;flex:1;padding-bottom:.5rem}
+.sheet-info{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:.875rem 1rem;margin-bottom:1rem}
+.si-row{display:flex;justify-content:space-between;align-items:center;font-size:14px;padding:3px 0}
+.si-label{color:var(--text2)}
+.si-val{font-weight:500;text-align:right;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.field{margin-bottom:1rem}
+.field label{display:block;font-size:13px;font-weight:500;color:var(--text2);margin-bottom:6px}
+.field label span{font-weight:400;color:var(--text3)}
+.field input,.field select,.field textarea{
+  width:100%;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:16px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);
+  color:var(--text);outline:none;transition:border-color .15s;
+  -webkit-appearance:none;appearance:none;
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--border2);background:var(--surface)}
+.field textarea{height:72px;resize:none}
+.sheet-actions{display:flex;gap:8px;padding:.875rem 0 calc(.875rem + var(--safe-bottom));flex-shrink:0}
+.sheet-actions button{flex:1;padding:14px;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:600;border-radius:var(--r);border:1px solid;cursor:pointer;transition:opacity .12s}
+.sheet-actions button:active{opacity:.7}
+.btn-cancel{background:var(--surface2);border-color:var(--border);color:var(--text2)}
+.btn-checkout{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}
+.btn-checkin{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+.btn-save{background:var(--text);border-color:var(--text);color:#fff}
+
+/* ── LOG VIEW (tab) ── */
+.log-wrap{padding:0 1.25rem;padding-bottom:calc(5rem + var(--safe-bottom))}
+.log-entry{display:flex;gap:12px;padding:1rem 0;border-bottom:1px solid var(--border);align-items:flex-start}
+.log-entry:last-child{border-bottom:none}
+.log-dot{width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0}
+.log-body{flex:1}
+.log-line{font-size:14px;color:var(--text);line-height:1.4}
+.log-time{font-size:12px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px}
+
+/* ── DESKTOP OVERRIDES (≥700px) ── */
+@media(min-width:700px){
+  .bottom-nav{display:none}
+  header{padding:0 2rem;height:60px}
+  .search-bar{top:60px;padding:.875rem 2rem}
+  .stats{grid-template-columns:repeat(5,1fr);padding:.875rem 2rem}
+  .filter-row{padding:0 2rem .875rem}
+  .cards-list{padding:0 2rem 2rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+  .section-label{padding:8px 2rem 4px}
+  .log-wrap{padding:1rem 2rem 2rem}
+  .sheet{border-radius:var(--r);max-width:460px;margin:auto;margin-bottom:auto;align-self:center}
+  .sheet-overlay{align-items:center}
+  .sheet-actions{padding:.875rem 0}
+  /* Desktop tabs replace bottom nav */
+  .desktop-tabs{display:flex;gap:4px;padding:0 2rem .875rem;overflow-x:auto}
+  .desktop-tabs::-webkit-scrollbar{display:none}
+  .dtab{flex-shrink:0;padding:7px 16px;border-radius:99px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);border:1px solid var(--border);background:var(--surface);white-space:nowrap}
+  .dtab.active{background:var(--text);color:#fff;border-color:var(--text)}
+  .header-actions{display:flex;gap:8px}
+  .hbtn{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:7px 14px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap}
+  .hbtn:hover{background:var(--surface2)}
+}
+@media(max-width:699px){
+  .desktop-tabs{display:none}
+  .header-actions{display:none}
+  body{padding-bottom:calc(60px + var(--safe-bottom))}
+  .sheet-overlay{align-items:flex-end}
+  .sheet{border-radius:20px 20px 0 0;max-height:88vh}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="8" rx="1.5" stroke="white" stroke-width="1.5"/><circle cx="5.5" cy="8" r="1.5" fill="white"/><line x1="8.5" y1="6.5" x2="12" y2="6.5" stroke="white" stroke-width="1.2" stroke-linecap="round"/><line x1="8.5" y1="9.5" x2="12" y2="9.5" stroke="white" stroke-width="1.2" stroke-linecap="round"/></svg>
+    </div>
+    <span class="logo-text">Security Card Tracker</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="header-actions">
+      <button class="hbtn" onclick="openAddCard()">+ Add card</button>
+      <button class="hbtn" onclick="doExport()">Export CSV</button>
+    </div>
+    <div class="clock" id="clock">--:--</div>
+  </div>
+</header>
+
+<div class="search-bar">
+  <div class="search-wrap">
+    <svg class="search-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4"/><path d="M10 10l3 3" stroke-linecap="round"/></svg>
+    <input type="search" id="search" placeholder="Search card # or name..." autocomplete="off" autocorrect="off" spellcheck="false">
+    <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-label">Total</div><div class="stat-num" id="s-total">0</div></div>
+  <div class="stat"><div class="stat-label">Loaned</div><div class="stat-num num-red" id="s-loaned">0</div></div>
+  <div class="stat"><div class="stat-label">Storage</div><div class="stat-num num-green" id="s-storage">0</div></div>
+  <div class="stat"><div class="stat-label">Lost</div><div class="stat-num num-amber" id="s-lost">0</div></div>
+</div>
+
+<!-- Desktop section tabs -->
+<div class="desktop-tabs" id="desktop-tabs">
+  <button class="dtab active" onclick="switchSection('all',this)">All cards</button>
+  <button class="dtab" onclick="switchSection('main',this)">Main office</button>
+  <button class="dtab" onclick="switchSection('trc',this)">TRC</button>
+  <button class="dtab" onclick="switchSection('guest',this)">Guest</button>
+</div>
+
+<!-- Status filter pills -->
+<div class="filter-row" id="filter-row">
+  <button class="ftab active" onclick="switchFilter('all',this)">All</button>
+  <button class="ftab" onclick="switchFilter('loaned',this,'active-red')">Loaned out</button>
+  <button class="ftab" onclick="switchFilter('storage',this,'active-green')">In storage</button>
+  <button class="ftab" onclick="switchFilter('lost',this,'active-amber')">Lost</button>
+</div>
+
+<div id="main-view">
+  <div id="cards-container"></div>
+</div>
+
+<div id="log-view" style="display:none">
+  <div class="log-wrap" id="log-list"></div>
+</div>
+
+<!-- Bottom nav (mobile only) -->
+<nav class="bottom-nav">
+  <button class="bnav-btn active" id="bnav-cards" onclick="showView('cards',this)">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="16" height="12" rx="2"/><circle cx="6" cy="10" r="1.5" fill="currentColor" stroke="none"/><line x1="9.5" y1="7.5" x2="15" y2="7.5" stroke-linecap="round"/><line x1="9.5" y1="10" x2="15" y2="10" stroke-linecap="round"/><line x1="9.5" y1="12.5" x2="13" y2="12.5" stroke-linecap="round"/></svg>
+    Cards
+  </button>
+  <button class="bnav-btn" id="bnav-log" onclick="showView('log',this)">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z" rx="1"/><line x1="7" y1="8" x2="13" y2="8" stroke-linecap="round"/><line x1="7" y1="11" x2="13" y2="11" stroke-linecap="round"/><line x1="7" y1="14" x2="10" y2="14" stroke-linecap="round"/></svg>
+    Log
+  </button>
+  <button class="bnav-btn" id="bnav-add" onclick="openAddCard()">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="7"/><line x1="10" y1="7" x2="10" y2="13" stroke-linecap="round"/><line x1="7" y1="10" x2="13" y2="10" stroke-linecap="round"/></svg>
+    Add
+  </button>
+  <button class="bnav-btn" id="bnav-section" onclick="openSectionSheet()">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="5" x2="17" y2="5" stroke-linecap="round"/><line x1="3" y1="10" x2="17" y2="10" stroke-linecap="round"/><line x1="3" y1="15" x2="12" y2="15" stroke-linecap="round"/></svg>
+    Filter
+  </button>
+</nav>
+
+<!-- Checkout Sheet -->
+<div class="sheet-overlay" id="checkout-sheet">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title" id="co-title">Check out</div>
+      <button class="sheet-close" onclick="closeSheets()">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="sheet-info" id="co-info"></div>
+      <div class="field">
+        <label>Your name <span>(optional)</span></label>
+        <input type="text" id="co-name" placeholder="Enter your name" autocomplete="name">
+      </div>
+      <div class="field">
+        <label>Notes <span>(optional)</span></label>
+        <input type="text" id="co-notes" placeholder="Purpose or location">
+      </div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn-cancel" onclick="closeSheets()">Cancel</button>
+      <button class="btn-checkout" onclick="saveCheckout()">Check out</button>
+    </div>
+  </div>
+</div>
+
+<!-- Checkin Sheet -->
+<div class="sheet-overlay" id="checkin-sheet">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title" id="ci-title">Check in</div>
+      <button class="sheet-close" onclick="closeSheets()">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="sheet-info" id="ci-info"></div>
+      <div class="field">
+        <label>Notes <span>(optional)</span></label>
+        <input type="text" id="ci-notes" placeholder="Any comments on return...">
+      </div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn-cancel" onclick="closeSheets()">Cancel</button>
+      <button class="btn-checkin" onclick="saveCheckin()">Check in</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Sheet -->
+<div class="sheet-overlay" id="edit-sheet">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title" id="edit-title">Edit card</div>
+      <button class="sheet-close" onclick="closeSheets()">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="field">
+        <label>Status</label>
+        <select id="m-status">
+          <option value="loaned">Loaned out</option>
+          <option value="storage">In storage</option>
+          <option value="lost">Lost</option>
+          <option value="returned">Returned</option>
+          <option value="other">Unclear</option>
+        </select>
+      </div>
+      <div class="field"><label>Holder name</label><input type="text" id="m-holder" placeholder="Person holding the card"></div>
+      <div class="field"><label>Company / Dept</label><input type="text" id="m-company"></div>
+      <div class="field"><label>Issued by</label><input type="text" id="m-issuer"></div>
+      <div class="field"><label>Loan date</label><input type="text" id="m-loandate" placeholder="e.g. 4/10/2026"></div>
+      <div class="field"><label>Return date</label><input type="text" id="m-returndate" placeholder="e.g. 4/20/2026"></div>
+      <div class="field"><label>Notes</label><textarea id="m-notes"></textarea></div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn-cancel" onclick="closeSheets()">Cancel</button>
+      <button class="btn-save" onclick="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Card Sheet -->
+<div class="sheet-overlay" id="add-sheet">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">Add new card</div>
+      <button class="sheet-close" onclick="closeSheets()">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="field"><label>Card number *</label><input type="text" id="a-cardno" placeholder="e.g. 19080200"></div>
+      <div class="field">
+        <label>Section</label>
+        <select id="a-section">
+          <option value="main">Main office</option>
+          <option value="trc">TRC</option>
+          <option value="guest">Guest</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="a-status">
+          <option value="storage">In storage</option>
+          <option value="loaned">Loaned out</option>
+          <option value="lost">Lost</option>
+        </select>
+      </div>
+      <div class="field"><label>Holder name</label><input type="text" id="a-holder" placeholder="Person holding the card"></div>
+      <div class="field"><label>Company / Dept</label><input type="text" id="a-company"></div>
+      <div class="field"><label>Issued by</label><input type="text" id="a-issuer"></div>
+      <div class="field"><label>Notes</label><input type="text" id="a-notes"></div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn-cancel" onclick="closeSheets()">Cancel</button>
+      <button class="btn-save" onclick="saveAdd()">Add card</button>
+    </div>
+  </div>
+</div>
+
+<!-- Section filter sheet (mobile) -->
+<div class="sheet-overlay" id="section-sheet">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">Filter by section</div>
+      <button class="sheet-close" onclick="closeSheets()">✕</button>
+    </div>
+    <div class="sheet-body" style="padding-bottom:.5rem">
+      <div id="section-options"></div>
+    </div>
+    <div style="height:calc(.875rem + var(--safe-bottom))"></div>
+  </div>
+</div>
+
+<script>
+const SK='jpn_sct_v2', LK='jpn_sct_log_v2';
+
+const SEED=[
+  {id:'19080100',section:'main',status:'lost',holder:'Jack X Zhang',company:'Applied Intuition',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080101',section:'main',status:'lost',holder:'飯尾淳',company:'Applied Intuition',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080102',section:'main',status:'lost',holder:'Feike Postmes',company:'Applied Intuition',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080103',section:'main',status:'storage',holder:'Jeonghyun',company:'HiroYa',issuer:'',loanDate:'1/10/2025',returnDate:'',notes:''},
+  {id:'19080133',section:'main',status:'lost',holder:'',company:'Applied Intuition',issuer:'',loanDate:'',returnDate:'',notes:"Exchanged because it doesn't work."},
+  {id:'19080134',section:'main',status:'loaned',holder:'Nikolaus Zaoputra',company:'for Daisuke Hashimoto',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080135',section:'main',status:'returned',holder:'Expired',company:'Topy',issuer:'',loanDate:'',returnDate:'1/31/2025',notes:'Returned on Jan 22 2026'},
+  {id:'19080136',section:'main',status:'storage',holder:'',company:'Isuzu',issuer:'',loanDate:'2/2/2026',returnDate:'2/2/2026',notes:'Isuzu 様'},
+  {id:'19080137',section:'main',status:'lost',holder:'中島謙二',company:'Applied Intuition',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080138',section:'main',status:'lost',holder:'Juan',company:'Koh',issuer:'',loanDate:'3/1/2024',returnDate:'',notes:''},
+  {id:'19080010',section:'main',status:'storage',holder:'',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080118',section:'main',status:'storage',holder:'',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080116',section:'main',status:'loaned',holder:'Shu (Cuiwei Zhu)',company:'Micheal Chung',issuer:'',loanDate:'4/2/2026',returnDate:'4/21/2026',notes:''},
+  {id:'19080166',section:'main',status:'loaned',holder:'Kalpak Kalvit',company:'',issuer:'',loanDate:'7/28/2025',returnDate:'8/1/2025',notes:'Still hold the key -2026.01.05'},
+  {id:'19080167',section:'main',status:'storage',holder:'',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080168',section:'main',status:'lost',holder:'',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080169',section:'main',status:'storage',holder:'',company:'',issuer:'',loanDate:'3/24/2026',returnDate:'',notes:''},
+  {id:'19080170',section:'main',status:'storage',holder:'',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080171',section:'main',status:'loaned',holder:'Ecehan Uludag',company:'',issuer:'',loanDate:'',returnDate:'',notes:'Long term use'},
+  {id:'971',section:'trc',status:'loaned',holder:'Kenji Nakashima',company:'',issuer:'Geoff',loanDate:'2/6/2025',returnDate:'',notes:''},
+  {id:'972',section:'trc',status:'loaned',holder:'Daniel Chiu',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'973',section:'trc',status:'loaned',holder:'Bexultan Rakhim',company:'',issuer:'Geoff',loanDate:'5/13/2025',returnDate:'',notes:''},
+  {id:'974',section:'trc',status:'loaned',holder:'Jeonghyun Kim',company:'',issuer:'Shu',loanDate:'6/26/2025',returnDate:'',notes:''},
+  {id:'975',section:'trc',status:'loaned',holder:'Mike Lowe',company:'',issuer:'Shu',loanDate:'7/28/2025',returnDate:'',notes:''},
+  {id:'976',section:'trc',status:'loaned',holder:'Suzuki',company:'',issuer:'Shu',loanDate:'8/18/2025',returnDate:'',notes:''},
+  {id:'977',section:'trc',status:'loaned',holder:'Kit Kita',company:'',issuer:'Shu',loanDate:'3/30/2026',returnDate:'4/20/2026',notes:''},
+  {id:'978',section:'trc',status:'loaned',holder:'Kit Kita',company:'',issuer:'Shu',loanDate:'',returnDate:'4/20/2026',notes:''},
+  {id:'979',section:'trc',status:'loaned',holder:'Kit Kita',company:'',issuer:'Shu',loanDate:'',returnDate:'4/20/2026',notes:''},
+  {id:'980',section:'trc',status:'loaned',holder:'Yasushi Ishibashi',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'981',section:'trc',status:'loaned',holder:'Tomohiko Amanuma',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'982',section:'trc',status:'loaned',holder:'Neil Sharma',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:'Nov 10'},
+  {id:'983',section:'trc',status:'loaned',holder:'Enrique Calderon',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'984',section:'trc',status:'loaned',holder:'Andrey Pak',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'985',section:'trc',status:'loaned',holder:'Sebastian Tahara',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'986',section:'trc',status:'loaned',holder:'Geoff Fitzjarrell',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'987',section:'trc',status:'loaned',holder:'Takahiro Yamakawa',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'988',section:'trc',status:'loaned',holder:'Farhan Faisal',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'989',section:'trc',status:'loaned',holder:'Hino',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'990',section:'trc',status:'lost',holder:'Deactivated',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'1296',section:'trc',status:'loaned',holder:'Kit Kita',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'1297',section:'trc',status:'storage',holder:'',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:"I didn't hand this card out, and it is not in my box."},
+  {id:'1298',section:'trc',status:'loaned',holder:'Topy (Toshiyuki) Isobe',company:'',issuer:'Junichi',loanDate:'',returnDate:'',notes:'Not sure when this was handed out'},
+  {id:'1299',section:'trc',status:'loaned',holder:'Zijian Zhu',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:'08/25'},
+  {id:'1300',section:'trc',status:'loaned',holder:'Yutaka Fujiya',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'1301',section:'trc',status:'other',holder:'',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:"I didn't hand this card out, and it is not in my box."},
+  {id:'1302',section:'trc',status:'loaned',holder:'Kevin Kruempelstaedter',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'1303',section:'trc',status:'loaned',holder:'Joseph Scordino',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'1304',section:'trc',status:'loaned',holder:'Daniel Seckinger IV',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:'DECK PROJECT'},
+  {id:'1305',section:'trc',status:'loaned',holder:'Anutam Sethuraman',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'1715',section:'trc',status:'storage',holder:'',company:'Hino',issuer:'Junichi Tamagawa',loanDate:'',returnDate:'',notes:''},
+  {id:'1716',section:'trc',status:'storage',holder:'',company:'Hino',issuer:'Junichi Tamagawa',loanDate:'',returnDate:'',notes:''},
+  {id:'1717',section:'trc',status:'loaned',holder:'Ben Lee',company:'',issuer:'Junichi Tamagawa',loanDate:'',returnDate:'',notes:''},
+  {id:'1718',section:'trc',status:'loaned',holder:'Huang Jieyu',company:'',issuer:'Junichi Tamagawa',loanDate:'3/2',returnDate:'3/2',notes:'Contractor Admin'},
+  {id:'1719',section:'trc',status:'storage',holder:'',company:'Hino',issuer:'Junichi Tamagawa',loanDate:'',returnDate:'',notes:''},
+  {id:'1720',section:'trc',status:'loaned',holder:'Cuiwei Zhu',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'1721',section:'trc',status:'storage',holder:'',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'1722',section:'trc',status:'loaned',holder:'Dimas Akbar',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'1723',section:'trc',status:'loaned',holder:'Aida Sanguanwongthong',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'1724',section:'trc',status:'loaned',holder:'Joe Hara',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'1725',section:'guest',status:'storage',holder:'Takahiro Yamakawa',company:'',issuer:'Takahiro Yamakawa',loanDate:'',returnDate:'4/8',notes:''},
+  {id:'1726',section:'guest',status:'loaned',holder:'Daichi Hayakawa',company:'',issuer:'Takahiro Yamakawa',loanDate:'4/6',returnDate:'',notes:''},
+  {id:'1727',section:'guest',status:'loaned',holder:'Shinichi Suenaga',company:'',issuer:'Takahiro Yamakawa',loanDate:'4/10',returnDate:'',notes:''},
+  {id:'1728',section:'guest',status:'storage',holder:'Takahiro Yamakawa',company:'',issuer:'Takahiro Yamakawa',loanDate:'',returnDate:'4/8',notes:''},
+  {id:'1729',section:'guest',status:'storage',holder:'Takahiro Yamakawa',company:'',issuer:'Takahiro Yamakawa',loanDate:'',returnDate:'4/8',notes:''},
+  {id:'1730',section:'guest',status:'loaned',holder:'Shota Akiyoshi',company:'',issuer:'Takahiro Yamakawa',loanDate:'',returnDate:'4/8',notes:'Chubu'},
+  {id:'1731',section:'guest',status:'loaned',holder:'Masatoshi Akiyama',company:'',issuer:'Takahiro Yamakawa',loanDate:'3/13',returnDate:'',notes:''},
+  {id:'1732',section:'guest',status:'loaned',holder:'Eitaro Tanoue',company:'',issuer:'Joe Hara',loanDate:'3/13',returnDate:'',notes:''},
+  {id:'1733',section:'guest',status:'loaned',holder:'HyunWook Jung',company:'',issuer:'Enrique Calderon',loanDate:'3/23',returnDate:'',notes:''},
+  {id:'1734',section:'guest',status:'loaned',holder:'Kotaro Kimura',company:'',issuer:'Takahiro Yamakawa',loanDate:'4/8',returnDate:'',notes:''},
+  {id:'1735',section:'guest',status:'loaned',holder:'Jun Yamamoto',company:'',issuer:'Enrique Calderon',loanDate:'3/13/2026',returnDate:'',notes:'HD11 Night shift'},
+  {id:'1736',section:'guest',status:'loaned',holder:'Kotaro Kimura',company:'',issuer:'Enrique Calderon',loanDate:'4/8/2026',returnDate:'',notes:''},
+];
+
+let cards=[], log=[], activeId=null, activeSection='all', activeFilter='all', activeView='cards';
+
+function save(){try{localStorage.setItem(SK,JSON.stringify(cards));localStorage.setItem(LK,JSON.stringify(log.slice(0,500)));}catch(e){}}
+function load(){
+  try{const s=localStorage.getItem(SK);cards=s?JSON.parse(s):JSON.parse(JSON.stringify(SEED));}catch{cards=JSON.parse(JSON.stringify(SEED));}
+  try{const l=localStorage.getItem(LK);log=l?JSON.parse(l):[];}catch{log=[];}
+}
+
+function badge(status){
+  const m={loaned:['b-loaned','Loaned'],storage:['b-storage','In storage'],lost:['b-lost','Lost'],returned:['b-returned','Returned'],other:['b-unclear','Unclear']};
+  const [c,l]=m[status]||m.other;
+  return`<span class="badge ${c}">${l}</span>`;
+}
+
+function fmt(ts){
+  if(!ts)return'';
+  return new Date(ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+function today(){return new Date().toLocaleDateString('en-US',{month:'numeric',day:'numeric',year:'numeric'});}
+
+function filtered(){
+  const q=document.getElementById('search').value.toLowerCase();
+  return cards.filter(c=>{
+    const sec=activeSection==='all'||c.section===activeSection;
+    const st=activeFilter==='all'||c.status===activeFilter;
+    const txt=!q||[c.id,c.holder,c.company,c.issuer,c.notes].join(' ').toLowerCase().includes(q);
+    return sec&&st&&txt;
+  });
+}
+
+function updateStats(){
+  const src=activeSection==='all'?cards:cards.filter(c=>c.section===activeSection);
+  document.getElementById('s-total').textContent=src.length;
+  document.getElementById('s-loaned').textContent=src.filter(c=>c.status==='loaned').length;
+  document.getElementById('s-storage').textContent=src.filter(c=>c.status==='storage').length;
+  document.getElementById('s-lost').textContent=src.filter(c=>c.status==='lost').length;
+}
+
+function renderCards(){
+  const list=filtered();
+  const container=document.getElementById('cards-container');
+  if(list.length===0){container.innerHTML='<div class="empty-state">No cards match</div>';return;}
+
+  const sections=[
+    {key:'main',label:'Main office'},
+    {key:'trc',label:'TRC'},
+    {key:'guest',label:'Guest cards'},
+  ];
+
+  let html='';
+  if(activeSection==='all'){
+    sections.forEach(({key,label})=>{
+      const group=list.filter(c=>c.section===key);
+      if(!group.length)return;
+      html+=`<div class="section-label">${label}</div><div class="cards-list">`;
+      html+=group.map(c=>cardHtml(c)).join('');
+      html+=`</div>`;
+    });
+  } else {
+    html=`<div class="cards-list">${list.map(c=>cardHtml(c)).join('')}</div>`;
+  }
+  container.innerHTML=html;
+}
+
+function cardHtml(c){
+  const isLoaned=c.status==='loaned';
+  const isStorage=c.status==='storage';
+  const meta=[c.company,c.issuer?'by '+c.issuer:'',c.loanDate?'since '+c.loanDate:''].filter(Boolean).join(' · ');
+  const actionBtn=isLoaned
+    ?`<button class="card-btn card-btn-in" onclick="openCheckin('${c.id}')">Check in</button>`
+    :isStorage
+    ?`<button class="card-btn card-btn-out" onclick="openCheckout('${c.id}')">Check out</button>`
+    :`<button class="card-btn card-btn-edit" onclick="openEdit('${c.id}')">Edit</button>`;
+  return`<div class="card-item">
+    <div class="card-left">
+      <div class="card-num">${c.id}</div>
+      <div class="card-holder">${c.holder||'—'}</div>
+      ${meta?`<div class="card-meta">${meta}</div>`:''}
+      ${c.notes?`<div class="card-meta" style="color:var(--text3)">${c.notes}</div>`:''}
+    </div>
+    <div class="card-right">
+      ${badge(c.status)}
+      ${actionBtn}
+    </div>
+  </div>`;
+}
+
+function renderLog(){
+  const el=document.getElementById('log-list');
+  if(!log.length){el.innerHTML='<div class="empty-state">No activity yet</div>';return;}
+  el.innerHTML=log.slice(0,80).map(e=>`
+    <div class="log-entry">
+      <div class="log-dot" style="background:${e.action==='checkin'?'var(--green)':e.action==='checkout'?'var(--red)':'var(--blue)'}"></div>
+      <div class="log-body">
+        <div class="log-line"><strong>${e.cardId}</strong> — ${e.desc}</div>
+        <div class="log-time">${fmt(e.ts)}</div>
+      </div>
+    </div>`).join('');
+}
+
+function render(){updateStats();renderCards();renderLog();}
+
+function showView(v,btn){
+  activeView=v;
+  document.getElementById('main-view').style.display=v==='cards'?'':'none';
+  document.getElementById('log-view').style.display=v==='log'?'':'none';
+  document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+}
+
+function switchSection(sec,btn){
+  activeSection=sec;
+  document.querySelectorAll('.dtab').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  render();
+}
+
+function switchFilter(f,btn,activeClass='active'){
+  activeFilter=f;
+  document.querySelectorAll('.ftab').forEach(b=>{b.classList.remove('active','active-red','active-green','active-amber');});
+  btn.classList.add(activeClass||'active');
+  renderCards();
+}
+
+function clearSearch(){
+  document.getElementById('search').value='';
+  document.getElementById('search-clear').classList.remove('show');
+  renderCards();
+}
+
+function openCheckout(id){
+  activeId=id;
+  const c=cards.find(x=>x.id===id);
+  document.getElementById('co-title').textContent='Check out '+id;
+  document.getElementById('co-info').innerHTML=`
+    <div class="si-row"><span class="si-label">Status</span><span class="si-val">${badge(c.status)}</span></div>
+    ${c.holder?`<div class="si-row"><span class="si-label">Last holder</span><span class="si-val">${c.holder}</span></div>`:''}`;
+  document.getElementById('co-name').value='';
+  document.getElementById('co-notes').value='';
+  document.getElementById('checkout-sheet').classList.add('open');
+  setTimeout(()=>document.getElementById('co-name').focus(),300);
+}
+
+function saveCheckout(){
+  const c=cards.find(x=>x.id===activeId);if(!c)return;
+  const name=document.getElementById('co-name').value.trim();
+  const notes=document.getElementById('co-notes').value.trim();
+  c.status='loaned';c.holder=name;c.loanDate=today();c.returnDate='';
+  if(notes)c.notes=notes;
+  log.unshift({cardId:c.id,action:'checkout',desc:'checked out'+(name?' by '+name:'')+(notes?' — '+notes:''),ts:Date.now()});
+  closeSheets();save();render();
+}
+
+function openCheckin(id){
+  activeId=id;
+  const c=cards.find(x=>x.id===id);
+  document.getElementById('ci-title').textContent='Check in '+id;
+  document.getElementById('ci-info').innerHTML=`
+    <div class="si-row"><span class="si-label">Held by</span><span class="si-val">${c.holder||'—'}</span></div>
+    ${c.loanDate?`<div class="si-row"><span class="si-label">Since</span><span class="si-val">${c.loanDate}</span></div>`:''}
+    ${c.notes?`<div class="si-row"><span class="si-label">Notes</span><span class="si-val">${c.notes}</span></div>`:''}`;
+  document.getElementById('ci-notes').value='';
+  document.getElementById('checkin-sheet').classList.add('open');
+  setTimeout(()=>document.getElementById('ci-notes').focus(),300);
+}
+
+function saveCheckin(){
+  const c=cards.find(x=>x.id===activeId);if(!c)return;
+  const notes=document.getElementById('ci-notes').value.trim();
+  const prev=c.holder;
+  c.status='storage';c.returnDate=today();
+  if(notes)c.notes=notes;
+  log.unshift({cardId:c.id,action:'checkin',desc:'checked in'+(prev?' by '+prev:'')+(notes?' — '+notes:''),ts:Date.now()});
+  closeSheets();save();render();
+}
+
+function openEdit(id){
+  activeId=id;
+  const c=cards.find(x=>x.id===id);
+  document.getElementById('edit-title').textContent='Edit '+id;
+  document.getElementById('m-status').value=c.status;
+  document.getElementById('m-holder').value=c.holder||'';
+  document.getElementById('m-company').value=c.company||'';
+  document.getElementById('m-issuer').value=c.issuer||'';
+  document.getElementById('m-loandate').value=c.loanDate||'';
+  document.getElementById('m-returndate').value=c.returnDate||'';
+  document.getElementById('m-notes').value=c.notes||'';
+  document.getElementById('edit-sheet').classList.add('open');
+}
+
+function saveEdit(){
+  const c=cards.find(x=>x.id===activeId);if(!c)return;
+  const old=c.status;
+  c.status=document.getElementById('m-status').value;
+  c.holder=document.getElementById('m-holder').value.trim();
+  c.company=document.getElementById('m-company').value.trim();
+  c.issuer=document.getElementById('m-issuer').value.trim();
+  c.loanDate=document.getElementById('m-loandate').value.trim();
+  c.returnDate=document.getElementById('m-returndate').value.trim();
+  c.notes=document.getElementById('m-notes').value.trim();
+  const lbl={loaned:'marked loaned',storage:'returned to storage',lost:'marked lost',returned:'marked returned',other:'marked unclear'};
+  log.unshift({cardId:c.id,action:'edit',desc:old!==c.status?lbl[c.status]||'updated':'details updated',ts:Date.now()});
+  closeSheets();save();render();
+}
+
+function openAddCard(){
+  ['a-cardno','a-holder','a-company','a-issuer','a-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('add-sheet').classList.add('open');
+  setTimeout(()=>document.getElementById('a-cardno').focus(),300);
+}
+
+function saveAdd(){
+  const id=document.getElementById('a-cardno').value.trim();
+  if(!id){document.getElementById('a-cardno').style.borderColor='var(--red)';return;}
+  if(cards.find(c=>c.id===id)){alert('Card '+id+' already exists.');return;}
+  cards.push({id,section:document.getElementById('a-section').value,status:document.getElementById('a-status').value,
+    holder:document.getElementById('a-holder').value.trim(),company:document.getElementById('a-company').value.trim(),
+    issuer:document.getElementById('a-issuer').value.trim(),loanDate:'',returnDate:'',notes:document.getElementById('a-notes').value.trim()});
+  log.unshift({cardId:id,action:'add',desc:'new card added',ts:Date.now()});
+  closeSheets();save();render();
+}
+
+function openSectionSheet(){
+  const sections=[{key:'all',label:'All cards'},{key:'main',label:'Main office (1908xxxx)'},{key:'trc',label:'TRC (971–1736)'},{key:'guest',label:'Guest cards'}];
+  document.getElementById('section-options').innerHTML=sections.map(s=>`
+    <div onclick="selectSection('${s.key}')" style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:16px">
+      <span>${s.label}</span>
+      ${activeSection===s.key?`<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 9l4 4 8-8" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`:''}
+    </div>`).join('');
+  document.getElementById('section-sheet').classList.add('open');
+}
+
+function selectSection(key){
+  activeSection=key;
+  document.querySelectorAll('.dtab').forEach((b,i)=>{
+    b.classList.toggle('active',['all','main','trc','guest'][i]===key);
+  });
+  closeSheets();render();
+}
+
+function closeSheets(){
+  document.querySelectorAll('.sheet-overlay').forEach(s=>s.classList.remove('open'));
+  activeId=null;
+}
+
+function doExport(){
+  const rows=[['Card #','Section','Status','Holder','Company','Issued By','Loan Date','Return Date','Notes']];
+  cards.forEach(c=>rows.push([c.id,c.section,c.status,c.holder,c.company,c.issuer,c.loanDate,c.returnDate,c.notes]));
+  const csv=rows.map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='cards-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+function updateClock(){
+  document.getElementById('clock').textContent=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+}
+
+document.getElementById('search').addEventListener('input',function(){
+  document.getElementById('search-clear').classList.toggle('show',!!this.value);
+  renderCards();
+});
+
+document.querySelectorAll('.sheet-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeSheets();}));
+
+load();render();updateClock();
+setInterval(updateClock,30000);
+</script>
+</body>
+</html>
