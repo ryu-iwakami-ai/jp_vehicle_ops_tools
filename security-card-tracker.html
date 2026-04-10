@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Japan Office — Security Card Tracker</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+:root{
+  --bg:#f5f4f0;--surface:#fff;--surface2:#f0ede8;--border:#e2ddd8;--border2:#ccc8c2;
+  --text:#1a1916;--text2:#6b6760;--text3:#9e9b96;
+  --green:#1a7a4a;--green-bg:#eaf4ee;--green-border:#b6dfc5;
+  --red:#b83232;--red-bg:#fbeaea;--red-border:#f0b8b8;
+  --amber:#7a5200;--amber-bg:#fdf3dc;--amber-border:#f0d080;
+  --blue:#1a4fa0;--blue-bg:#eaf0fb;--blue-border:#b0c8f0;
+  --radius:10px;--radius-sm:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 2rem;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;letter-spacing:-0.01em}
+.logo-icon{width:28px;height:28px;background:var(--text);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.logo-icon svg{width:16px;height:16px}
+.clock{font-family:'DM Mono',monospace;font-size:12px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 10px}
+main{max-width:1200px;margin:0 auto;padding:2rem 1.5rem}
+.page-title{font-size:22px;font-weight:600;letter-spacing:-0.02em;margin-bottom:.2rem}
+.page-sub{font-size:13px;color:var(--text2);margin-bottom:1.5rem}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1.5rem}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.875rem 1rem}
+.stat-label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:5px}
+.stat-num{font-size:26px;font-weight:600;letter-spacing:-0.03em;font-family:'DM Mono',monospace}
+.num-red{color:var(--red)}.num-green{color:var(--green)}.num-amber{color:var(--amber)}.num-blue{color:var(--blue)}
+.tabs{display:flex;gap:4px;margin-bottom:1rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px;width:fit-content}
+.tab{padding:6px 16px;border-radius:4px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);border:none;background:transparent;transition:all .12s}
+.tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.tab:hover:not(.active){color:var(--text)}
+.toolbar{display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap;align-items:center}
+input[type="text"],select{font-family:'DM Sans',sans-serif;font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 12px;color:var(--text);outline:none;transition:border-color .15s}
+input[type="text"]:focus,select:focus{border-color:var(--border2)}
+#search{flex:1;min-width:200px}
+button{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);padding:7px 14px;cursor:pointer;transition:background .12s;white-space:nowrap}
+button:hover{background:var(--surface2)}
+button:active{transform:scale(.98)}
+.btn-danger{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}
+.btn-success{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+.btn-primary{background:var(--text);border-color:var(--text);color:#fff}
+.btn-primary:hover{opacity:.85}
+.btn-amber{background:var(--amber-bg);border-color:var(--amber-border);color:var(--amber)}
+.layout{display:grid;grid-template-columns:1fr 320px;gap:1.25rem;align-items:start}
+.section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.section-header{padding:.75rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.section-title{font-size:13px;font-weight:600}
+.section-count{font-size:11px;color:var(--text3);background:var(--surface2);border:1px solid var(--border);border-radius:99px;padding:2px 8px;font-family:'DM Mono',monospace}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);padding:8px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--surface2)}
+tbody td{padding:9px 12px;color:var(--text);vertical-align:middle}
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.b-loaned{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.b-storage{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.b-lost{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+.b-returned{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
+.b-unclear{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.action-btn{padding:4px 10px;font-size:12px}
+.td-mono{font-family:'DM Mono',monospace;font-size:12px}
+.td-muted{color:var(--text2)}
+.comment-cell{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2);font-size:12px}
+.log-entry{display:flex;align-items:flex-start;gap:10px;padding:.625rem 1.25rem;border-bottom:1px solid var(--border)}
+.log-entry:last-child{border-bottom:none}
+.log-dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.log-body{flex:1;min-width:0}
+.log-line{font-size:13px;color:var(--text)}
+.log-time{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace}
+.log-scroll{max-height:500px;overflow-y:auto}
+.empty{padding:2rem;text-align:center;color:var(--text3);font-size:13px}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;align-items:center;justify-content:center;padding:1rem}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;width:100%;max-width:400px;animation:min .15s ease}
+@keyframes min{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:.2rem;letter-spacing:-0.01em}
+.modal-sub{font-size:12px;color:var(--text2);margin-bottom:1.25rem}
+.field{margin-bottom:.875rem}
+.field label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%}
+.field textarea{height:60px;resize:vertical;padding:7px 12px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);outline:none}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem}
+.info-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.75rem 1rem;margin-bottom:1rem}
+.info-row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0}
+.info-label{color:var(--text2)}
+.info-val{font-weight:500;text-align:right;max-width:200px}
+.section-group-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);padding:8px 12px 4px;background:var(--surface2);border-bottom:1px solid var(--border)}
+@media(max-width:860px){.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(3,1fr)}header{padding:0 1rem}main{padding:1.25rem 1rem}}
+@media(max-width:500px){.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="8" rx="1.5" stroke="white" stroke-width="1.5"/><circle cx="5.5" cy="8" r="1.5" fill="white"/><line x1="8.5" y1="6.5" x2="12" y2="6.5" stroke="white" stroke-width="1.2" stroke-linecap="round"/><line x1="8.5" y1="9.5" x2="12" y2="9.5" stroke="white" stroke-width="1.2" stroke-linecap="round"/></svg>
+    </div>
+    Japan Office — Security Card Tracker
+  </div>
+  <div class="clock" id="clock">--:--</div>
+</header>
+
+<main>
+  <div class="page-title">Card dashboard</div>
+  <div class="page-sub" id="date-line">Last confirmed: 4/10/2026</div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Total cards</div><div class="stat-num" id="s-total">0</div></div>
+    <div class="stat"><div class="stat-label">Loaned out</div><div class="stat-num num-red" id="s-loaned">0</div></div>
+    <div class="stat"><div class="stat-label">In storage</div><div class="stat-num num-green" id="s-storage">0</div></div>
+    <div class="stat"><div class="stat-label">Lost</div><div class="stat-num num-amber" id="s-lost">0</div></div>
+    <div class="stat"><div class="stat-label">Other</div><div class="stat-num num-blue" id="s-other">0</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchSection('all',this)">All cards</button>
+    <button class="tab" onclick="switchSection('main',this)">Main office (1908xxxx)</button>
+    <button class="tab" onclick="switchSection('trc',this)">TRC (971–1736)</button>
+    <button class="tab" onclick="switchSection('guest',this)">Guest cards</button>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="Search card #, name, company...">
+    <select id="filter-status" onchange="renderTable()">
+      <option value="all">All statuses</option>
+      <option value="loaned">Loaned out</option>
+      <option value="storage">In storage</option>
+      <option value="lost">Lost</option>
+      <option value="other">Other</option>
+    </select>
+    <button onclick="openAddCard()">+ Add card</button>
+    <button onclick="doExport()">Export CSV</button>
+  </div>
+
+  <div class="layout">
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Card inventory</span>
+        <span class="section-count" id="card-count">0 cards</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Card #</th>
+              <th>Status</th>
+              <th>Holder / Company</th>
+              <th>Issued by</th>
+              <th>Loan date</th>
+              <th>Return date</th>
+              <th>Notes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Activity log</span>
+        <button onclick="clearLog()" style="font-size:11px;padding:3px 8px;color:var(--text3)">Clear</button>
+      </div>
+      <div class="log-scroll" id="log-list">
+        <div class="empty">No activity yet — changes will appear here</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Edit/Checkout Modal -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <h3 id="modal-title">Edit card</h3>
+    <div class="modal-sub" id="modal-sub"></div>
+    <div class="info-box" id="modal-info"></div>
+    <div class="field">
+      <label>Status</label>
+      <select id="m-status">
+        <option value="loaned">Loaned out</option>
+        <option value="storage">In storage</option>
+        <option value="lost">Lost</option>
+        <option value="returned">Returned</option>
+        <option value="other">Other / Unclear</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Holder name</label>
+      <input type="text" id="m-holder" placeholder="Person holding the card">
+    </div>
+    <div class="field">
+      <label>Company / Dept</label>
+      <input type="text" id="m-company" placeholder="Company or department">
+    </div>
+    <div class="field">
+      <label>Issued by</label>
+      <input type="text" id="m-issuer" placeholder="Who issued the card">
+    </div>
+    <div class="field">
+      <label>Loan date</label>
+      <input type="text" id="m-loandate" placeholder="e.g. 4/10/2026">
+    </div>
+    <div class="field">
+      <label>Return date</label>
+      <input type="text" id="m-returndate" placeholder="e.g. 4/20/2026">
+    </div>
+    <div class="field">
+      <label>Notes / Comment</label>
+      <textarea id="m-notes" placeholder="Any additional notes..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button onclick="closeModals()">Cancel</button>
+      <button class="btn-primary" onclick="saveEdit()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Card Modal -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <h3>Add new card</h3>
+    <div class="modal-sub">Register a new security card into the system.</div>
+    <div class="field">
+      <label>Card number *</label>
+      <input type="text" id="a-cardno" placeholder="e.g. 19080200">
+    </div>
+    <div class="field">
+      <label>Section</label>
+      <select id="a-section">
+        <option value="main">Main office</option>
+        <option value="trc">TRC</option>
+        <option value="guest">Guest</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Status</label>
+      <select id="a-status">
+        <option value="storage">In storage</option>
+        <option value="loaned">Loaned out</option>
+        <option value="lost">Lost</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Holder name</label>
+      <input type="text" id="a-holder" placeholder="Person holding the card">
+    </div>
+    <div class="field">
+      <label>Company / Dept</label>
+      <input type="text" id="a-company" placeholder="">
+    </div>
+    <div class="field">
+      <label>Issued by</label>
+      <input type="text" id="a-issuer" placeholder="">
+    </div>
+    <div class="field">
+      <label>Notes</label>
+      <input type="text" id="a-notes" placeholder="">
+    </div>
+    <div class="modal-actions">
+      <button onclick="closeModals()">Cancel</button>
+      <button class="btn-primary" onclick="saveAdd()">Add card</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'jpn_sct_v1';
+const STORAGE_LOG = 'jpn_sct_log_v1';
+
+function statusCode(raw){
+  if(!raw) return 'storage';
+  const r = raw.toLowerCase();
+  if(r.includes('loaned')||r.includes('貸出中')) return 'loaned';
+  if(r.includes('storage')||r.includes('保管中')) return 'storage';
+  if(r.includes('lost')||r.includes('紛失')) return 'lost';
+  if(r.includes('returned')||r.includes('returned to')) return 'returned';
+  if(r.includes('not clear')||r.includes('不明')) return 'other';
+  return 'other';
+}
+
+const SEED = [
+  // Main office
+  {id:'19080100',section:'main',status:'lost',holder:'Jack X Zhang',company:'Applied Intuition',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080101',section:'main',status:'lost',holder:'飯尾淳',company:'Applied Intuition',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080102',section:'main',status:'lost',holder:'Feike Postmes',company:'Applied Intuition',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080103',section:'main',status:'storage',holder:'Jeonghyun',company:'HiroYa',issuer:'',loanDate:'1/10/2025',returnDate:'',notes:''},
+  {id:'19080133',section:'main',status:'lost',holder:'',company:'Applied Intuition',issuer:'',loanDate:'',returnDate:'',notes:"Exchanged because it doesn't work."},
+  {id:'19080134',section:'main',status:'loaned',holder:'Nikolaus Zaoputra',company:'for Daisuke Hashimoto',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080135',section:'main',status:'returned',holder:'Expired',company:'Topy',issuer:'',loanDate:'',returnDate:'1/31/2025',notes:'Returned on Jan 22 2026'},
+  {id:'19080136',section:'main',status:'storage',holder:'',company:'Isuzu',issuer:'',loanDate:'2/2/2026',returnDate:'2/2/2026',notes:'Isuzu 様'},
+  {id:'19080137',section:'main',status:'lost',holder:'中島謙二',company:'Applied Intuition',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080138',section:'main',status:'lost',holder:'Juan',company:'Koh',issuer:'',loanDate:'3/1/2024',returnDate:'',notes:''},
+  {id:'19080010',section:'main',status:'storage',holder:'',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080118',section:'main',status:'storage',holder:'',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080116',section:'main',status:'loaned',holder:'Shu (Cuiwei Zhu)',company:'Micheal Chung',issuer:'',loanDate:'4/2/2026',returnDate:'4/21/2026',notes:''},
+  {id:'19080166',section:'main',status:'loaned',holder:'Kalpak Kalvit',company:'',issuer:'',loanDate:'7/28/2025',returnDate:'8/1/2025',notes:'Still hold the key -2026.01.05'},
+  {id:'19080167',section:'main',status:'storage',holder:'',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080168',section:'main',status:'lost',holder:'',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080169',section:'main',status:'storage',holder:'',company:'',issuer:'',loanDate:'3/24/2026',returnDate:'',notes:''},
+  {id:'19080170',section:'main',status:'storage',holder:'',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'19080171',section:'main',status:'loaned',holder:'Ecehan Uludag',company:'',issuer:'',loanDate:'',returnDate:'',notes:'Long term use'},
+  // TRC
+  {id:'971',section:'trc',status:'loaned',holder:'Kenji Nakashima',company:'',issuer:'Geoff',loanDate:'2/6/2025',returnDate:'',notes:''},
+  {id:'972',section:'trc',status:'loaned',holder:'Daniel Chiu',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'973',section:'trc',status:'loaned',holder:'Bexultan Rakhim',company:'',issuer:'Geoff',loanDate:'5/13/2025',returnDate:'',notes:''},
+  {id:'974',section:'trc',status:'loaned',holder:'Jeonghyun Kim',company:'',issuer:'Shu',loanDate:'6/26/2025',returnDate:'',notes:''},
+  {id:'975',section:'trc',status:'loaned',holder:'Mike Lowe',company:'',issuer:'Shu',loanDate:'7/28/2025',returnDate:'',notes:''},
+  {id:'976',section:'trc',status:'loaned',holder:'Suzuki',company:'',issuer:'Shu',loanDate:'8/18/2025',returnDate:'',notes:''},
+  {id:'977',section:'trc',status:'loaned',holder:'Kit Kita',company:'',issuer:'Shu',loanDate:'3/30/2026',returnDate:'4/20/2026',notes:''},
+  {id:'978',section:'trc',status:'loaned',holder:'Kit Kita',company:'',issuer:'Shu',loanDate:'',returnDate:'4/20/2026',notes:''},
+  {id:'979',section:'trc',status:'loaned',holder:'Kit Kita',company:'',issuer:'Shu',loanDate:'',returnDate:'4/20/2026',notes:''},
+  {id:'980',section:'trc',status:'loaned',holder:'Yasushi Ishibashi',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'981',section:'trc',status:'loaned',holder:'Tomohiko Amanuma',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'982',section:'trc',status:'loaned',holder:'Neil Sharma',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:'Nov 10'},
+  {id:'983',section:'trc',status:'loaned',holder:'Enrique Calderon',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'984',section:'trc',status:'loaned',holder:'Andrey Pak',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'985',section:'trc',status:'loaned',holder:'Sebastian Tahara',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'986',section:'trc',status:'loaned',holder:'Geoff Fitzjarrell',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'987',section:'trc',status:'loaned',holder:'Takahiro Yamakawa',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'988',section:'trc',status:'loaned',holder:'Farhan Faisal',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'989',section:'trc',status:'loaned',holder:'Hino',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'990',section:'trc',status:'lost',holder:'Deactivated',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'1296',section:'trc',status:'loaned',holder:'Kit Kita',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'1297',section:'trc',status:'storage',holder:'',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:"I didn't hand this card out, and it is not in my box."},
+  {id:'1298',section:'trc',status:'loaned',holder:'Topy (Toshiyuki) Isobe',company:'',issuer:'Junichi',loanDate:'',returnDate:'',notes:'Not sure when this was handed out'},
+  {id:'1299',section:'trc',status:'loaned',holder:'Zijian Zhu',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:'08/25'},
+  {id:'1300',section:'trc',status:'loaned',holder:'Yutaka Fujiya',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'1301',section:'trc',status:'other',holder:'',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:"I didn't hand this card out, and it is not in my box."},
+  {id:'1302',section:'trc',status:'loaned',holder:'Kevin Kruempelstaedter',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'1303',section:'trc',status:'loaned',holder:'Joseph Scordino',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'1304',section:'trc',status:'loaned',holder:'Daniel Seckinger IV',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:'DECK PROJECT'},
+  {id:'1305',section:'trc',status:'loaned',holder:'Anutam Sethuraman',company:'',issuer:'Geoff',loanDate:'',returnDate:'',notes:''},
+  {id:'1715',section:'trc',status:'storage',holder:'',company:'Hino',issuer:'Junichi Tamagawa',loanDate:'',returnDate:'',notes:''},
+  {id:'1716',section:'trc',status:'storage',holder:'',company:'Hino',issuer:'Junichi Tamagawa',loanDate:'',returnDate:'',notes:''},
+  {id:'1717',section:'trc',status:'loaned',holder:'Ben Lee',company:'',issuer:'Junichi Tamagawa',loanDate:'',returnDate:'',notes:''},
+  {id:'1718',section:'trc',status:'loaned',holder:'Huang Jieyu',company:'',issuer:'Junichi Tamagawa',loanDate:'3/2',returnDate:'3/2',notes:'Contractor Admin'},
+  {id:'1719',section:'trc',status:'storage',holder:'',company:'Hino',issuer:'Junichi Tamagawa',loanDate:'',returnDate:'',notes:''},
+  {id:'1720',section:'trc',status:'loaned',holder:'Cuiwei Zhu',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'1721',section:'trc',status:'storage',holder:'',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'1722',section:'trc',status:'loaned',holder:'Dimas Akbar',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'1723',section:'trc',status:'loaned',holder:'Aida Sanguanwongthong',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  {id:'1724',section:'trc',status:'loaned',holder:'Joe Hara',company:'',issuer:'',loanDate:'',returnDate:'',notes:''},
+  // Guest
+  {id:'1725',section:'guest',status:'storage',holder:'Takahiro Yamakawa',company:'',issuer:'Takahiro Yamakawa',loanDate:'',returnDate:'4/8',notes:''},
+  {id:'1726',section:'guest',status:'loaned',holder:'Daichi Hayakawa',company:'',issuer:'Takahiro Yamakawa',loanDate:'4/6',returnDate:'',notes:''},
+  {id:'1727',section:'guest',status:'loaned',holder:'Shinichi Suenaga',company:'',issuer:'Takahiro Yamakawa',loanDate:'4/10',returnDate:'',notes:''},
+  {id:'1728',section:'guest',status:'storage',holder:'Takahiro Yamakawa',company:'',issuer:'Takahiro Yamakawa',loanDate:'',returnDate:'4/8',notes:''},
+  {id:'1729',section:'guest',status:'storage',holder:'Takahiro Yamakawa',company:'',issuer:'Takahiro Yamakawa',loanDate:'',returnDate:'4/8',notes:''},
+  {id:'1730',section:'guest',status:'loaned',holder:'Shota Akiyoshi',company:'',issuer:'Takahiro Yamakawa',loanDate:'',returnDate:'4/8',notes:'Chubu'},
+  {id:'1731',section:'guest',status:'loaned',holder:'Masatoshi Akiyama',company:'',issuer:'Takahiro Yamakawa',loanDate:'3/13',returnDate:'',notes:''},
+  {id:'1732',section:'guest',status:'loaned',holder:'Eitaro Tanoue',company:'',issuer:'Joe Hara',loanDate:'3/13',returnDate:'',notes:''},
+  {id:'1733',section:'guest',status:'loaned',holder:'HyunWook Jung',company:'',issuer:'Enrique Calderon',loanDate:'3/23',returnDate:'',notes:''},
+  {id:'1734',section:'guest',status:'loaned',holder:'Kotaro Kimura',company:'',issuer:'Takahiro Yamakawa',loanDate:'4/8',returnDate:'',notes:''},
+  {id:'1735',section:'guest',status:'loaned',holder:'Jun Yamamoto',company:'',issuer:'Enrique Calderon',loanDate:'3/13/2026',returnDate:'',notes:'HD11 Night shift'},
+  {id:'1736',section:'guest',status:'loaned',holder:'Kotaro Kimura',company:'',issuer:'Enrique Calderon',loanDate:'4/8/2026',returnDate:'',notes:''},
+];
+
+let cards = [];
+let log = [];
+let activeCardId = null;
+let activeSection = 'all';
+
+function save(){
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(cards));localStorage.setItem(STORAGE_LOG,JSON.stringify(log.slice(0,500)));}catch(e){}
+}
+
+function load(){
+  try{
+    const sc=localStorage.getItem(STORAGE_KEY);
+    cards=sc?JSON.parse(sc):JSON.parse(JSON.stringify(SEED));
+  }catch{cards=JSON.parse(JSON.stringify(SEED));}
+  try{
+    const sl=localStorage.getItem(STORAGE_LOG);
+    log=sl?JSON.parse(sl):[];
+  }catch{log=[];}
+}
+
+function fmt(ts){
+  if(!ts)return'';
+  const d=new Date(ts);
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' '+d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+}
+
+function badgeHtml(status){
+  const map={loaned:['b-loaned','Loaned out'],storage:['b-storage','In storage'],lost:['b-lost','Lost'],returned:['b-returned','Returned'],other:['b-unclear','Unclear']};
+  const [cls,label]=map[status]||map.other;
+  return`<span class="badge ${cls}">${label}</span>`;
+}
+
+function updateStats(){
+  const src=activeSection==='all'?cards:cards.filter(c=>c.section===activeSection);
+  document.getElementById('s-total').textContent=src.length;
+  document.getElementById('s-loaned').textContent=src.filter(c=>c.status==='loaned').length;
+  document.getElementById('s-storage').textContent=src.filter(c=>c.status==='storage').length;
+  document.getElementById('s-lost').textContent=src.filter(c=>c.status==='lost').length;
+  document.getElementById('s-other').textContent=src.filter(c=>c.status==='returned'||c.status==='other').length;
+}
+
+function renderTable(){
+  const q=document.getElementById('search').value.toLowerCase();
+  const sf=document.getElementById('filter-status').value;
+  let src=activeSection==='all'?cards:cards.filter(c=>c.section===activeSection);
+  src=src.filter(c=>{
+    const matchT=[c.id,c.holder,c.company,c.issuer,c.notes].join(' ').toLowerCase().includes(q);
+    const matchS=sf==='all'||(sf==='loaned'&&c.status==='loaned')||(sf==='storage'&&c.status==='storage')||(sf==='lost'&&c.status==='lost')||(sf==='other'&&(c.status==='other'||c.status==='returned'));
+    return matchT&&matchS;
+  });
+  document.getElementById('card-count').textContent=src.length+' cards';
+  const tbody=document.getElementById('table-body');
+  if(src.length===0){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text3)">No cards match</td></tr>';return;}
+  tbody.innerHTML=src.map(c=>{
+    const actionBtn=c.status==='loaned'
+      ?`<button class="action-btn btn-success" onclick="openEdit('${c.id}')">Check in</button>`
+      :c.status==='storage'
+      ?`<button class="action-btn btn-danger" onclick="openEdit('${c.id}')">Check out</button>`
+      :`<button class="action-btn" onclick="openEdit('${c.id}')">Edit</button>`;
+    return`<tr>
+      <td class="td-mono">${c.id}</td>
+      <td>${badgeHtml(c.status)}</td>
+      <td><div style="font-weight:500">${c.holder||'—'}</div>${c.company?`<div style="font-size:11px;color:var(--text2)">${c.company}</div>`:''}</td>
+      <td class="td-muted">${c.issuer||'—'}</td>
+      <td class="td-muted td-mono" style="font-size:12px">${c.loanDate||'—'}</td>
+      <td class="td-muted td-mono" style="font-size:12px">${c.returnDate||'—'}</td>
+      <td class="comment-cell" title="${c.notes||''}">${c.notes||''}</td>
+      <td>${actionBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderLog(){
+  const el=document.getElementById('log-list');
+  if(log.length===0){el.innerHTML='<div class="empty">No activity yet — changes will appear here</div>';return;}
+  el.innerHTML=log.slice(0,60).map(e=>`<div class="log-entry">
+    <div class="log-dot" style="background:${e.action==='checkin'?'var(--green)':e.action==='checkout'?'var(--red)':'var(--blue)'}"></div>
+    <div class="log-body">
+      <div class="log-line"><strong>${e.cardId}</strong> — ${e.desc}</div>
+      <div class="log-time">${fmt(e.ts)}</div>
+    </div>
+  </div>`).join('');
+}
+
+function render(){updateStats();renderTable();renderLog();}
+
+function switchSection(sec,btn){
+  activeSection=sec;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function openEdit(id){
+  activeCardId=id;
+  const c=cards.find(x=>x.id===id);
+  document.getElementById('modal-title').textContent='Edit card '+id;
+  document.getElementById('modal-sub').textContent='Update status or details for this card.';
+  document.getElementById('modal-info').innerHTML=`
+    <div class="info-row"><span class="info-label">Card #</span><span class="info-val" style="font-family:'DM Mono',monospace">${c.id}</span></div>
+    <div class="info-row"><span class="info-label">Current status</span><span class="info-val">${badgeHtml(c.status)}</span></div>
+    ${c.holder?`<div class="info-row"><span class="info-label">Current holder</span><span class="info-val">${c.holder}</span></div>`:''}`;
+  document.getElementById('m-status').value=c.status;
+  document.getElementById('m-holder').value=c.holder||'';
+  document.getElementById('m-company').value=c.company||'';
+  document.getElementById('m-issuer').value=c.issuer||'';
+  document.getElementById('m-loandate').value=c.loanDate||'';
+  document.getElementById('m-returndate').value=c.returnDate||'';
+  document.getElementById('m-notes').value=c.notes||'';
+  document.getElementById('edit-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('m-status').focus(),80);
+}
+
+function saveEdit(){
+  const c=cards.find(x=>x.id===activeCardId);
+  if(!c)return;
+  const oldStatus=c.status;
+  const newStatus=document.getElementById('m-status').value;
+  c.status=newStatus;
+  c.holder=document.getElementById('m-holder').value.trim();
+  c.company=document.getElementById('m-company').value.trim();
+  c.issuer=document.getElementById('m-issuer').value.trim();
+  c.loanDate=document.getElementById('m-loandate').value.trim();
+  c.returnDate=document.getElementById('m-returndate').value.trim();
+  c.notes=document.getElementById('m-notes').value.trim();
+  let desc='';
+  if(oldStatus!==newStatus){
+    const labels={loaned:'marked as Loaned out',storage:'returned to storage',lost:'marked as Lost',returned:'marked as Returned',other:'marked as Unclear'};
+    desc=`${labels[newStatus]||newStatus}`;
+    if(c.holder)desc+=` (${c.holder})`;
+    log.unshift({cardId:c.id,action:newStatus,desc,ts:Date.now()});
+  } else {
+    desc=`details updated`;
+    log.unshift({cardId:c.id,action:'edit',desc,ts:Date.now()});
+  }
+  closeModals();save();render();
+}
+
+function openAddCard(){
+  document.getElementById('a-cardno').value='';
+  document.getElementById('a-holder').value='';
+  document.getElementById('a-company').value='';
+  document.getElementById('a-issuer').value='';
+  document.getElementById('a-notes').value='';
+  document.getElementById('add-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('a-cardno').focus(),80);
+}
+
+function saveAdd(){
+  const id=document.getElementById('a-cardno').value.trim();
+  if(!id){document.getElementById('a-cardno').style.borderColor='var(--red)';return;}
+  if(cards.find(c=>c.id===id)){alert('Card '+id+' already exists.');return;}
+  const nc={
+    id,
+    section:document.getElementById('a-section').value,
+    status:document.getElementById('a-status').value,
+    holder:document.getElementById('a-holder').value.trim(),
+    company:document.getElementById('a-company').value.trim(),
+    issuer:document.getElementById('a-issuer').value.trim(),
+    loanDate:'',returnDate:'',
+    notes:document.getElementById('a-notes').value.trim()
+  };
+  cards.push(nc);
+  log.unshift({cardId:id,action:'add',desc:`new card added (${nc.status})`,ts:Date.now()});
+  closeModals();save();render();
+}
+
+function closeModals(){
+  document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.remove('open'));
+  activeCardId=null;
+}
+
+function doExport(){
+  const rows=[['Card #','Section','Status','Holder','Company','Issued By','Loan Date','Return Date','Notes']];
+  cards.forEach(c=>rows.push([c.id,c.section,c.status,c.holder,c.company,c.issuer,c.loanDate,c.returnDate,c.notes]));
+  const csv=rows.map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='card-inventory-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+function updateClock(){
+  const now=new Date();
+  document.getElementById('clock').textContent=now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('date-line').textContent='Last confirmed: 4/10/2026 · '+now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+}
+
+document.getElementById('search').addEventListener('input',renderTable);
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeModals();}));
+
+load();render();updateClock();
+setInterval(updateClock,1000);
+</script>
+</body>
+</html>
