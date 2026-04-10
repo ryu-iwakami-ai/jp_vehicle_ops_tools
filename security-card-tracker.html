@@ -203,10 +203,12 @@ header{
 
 <!-- Desktop section tabs -->
 <div class="desktop-tabs" id="desktop-tabs">
-  <button class="dtab active" onclick="switchSection('all',this)">All cards</button>
-  <button class="dtab" onclick="switchSection('main',this)">Main office</button>
-  <button class="dtab" onclick="switchSection('trc',this)">TRC</button>
-  <button class="dtab" onclick="switchSection('guest',this)">Guest</button>
+  <button class="dtab active" id="dtab-all" onclick="switchSection('all',this)">All cards</button>
+  <button class="dtab" id="dtab-main" onclick="switchSection('main',this)">Main office</button>
+  <button class="dtab" id="dtab-trc" onclick="switchSection('trc',this)">TRC</button>
+  <button class="dtab" id="dtab-guest" onclick="switchSection('guest',this)">Guest</button>
+  <span style="width:1px;background:var(--border);margin:0 4px;display:inline-block;height:20px;align-self:center"></span>
+  <button class="dtab" id="dtab-log" onclick="showDesktopLog(this)">Activity log</button>
 </div>
 
 <!-- Status filter pills -->
@@ -524,7 +526,6 @@ function renderCards(){
 function cardHtml(c){
   const isLoaned=c.status==='loaned';
   const isStorage=c.status==='storage';
-  const meta=[c.company,c.issuer?'by '+c.issuer:'',c.loanDate?'since '+c.loanDate:''].filter(Boolean).join(' · ');
   const actionBtn=isLoaned
     ?`<button class="card-btn card-btn-in" onclick="openCheckin('${c.id}')">Check in</button>`
     :isStorage
@@ -533,9 +534,7 @@ function cardHtml(c){
   return`<div class="card-item">
     <div class="card-left">
       <div class="card-num">${c.id}</div>
-      <div class="card-holder">${c.holder||'—'}</div>
-      ${meta?`<div class="card-meta">${meta}</div>`:''}
-      ${c.notes?`<div class="card-meta" style="color:var(--text3)">${c.notes}</div>`:''}
+      ${isLoaned&&c.holder?`<div class="card-holder">${c.holder}</div>`:''}
     </div>
     <div class="card-right">
       ${badge(c.status)}
@@ -563,12 +562,27 @@ function showView(v,btn){
   activeView=v;
   document.getElementById('main-view').style.display=v==='cards'?'':'none';
   document.getElementById('log-view').style.display=v==='log'?'':'none';
+  document.getElementById('filter-row').style.display=v==='log'?'none':'';
   document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
 }
 
+function showDesktopLog(btn){
+  activeView='log';
+  document.getElementById('main-view').style.display='none';
+  document.getElementById('log-view').style.display='';
+  document.getElementById('filter-row').style.display='none';
+  document.querySelectorAll('.dtab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLog();
+}
+
 function switchSection(sec,btn){
   activeSection=sec;
+  activeView='cards';
+  document.getElementById('main-view').style.display='';
+  document.getElementById('log-view').style.display='none';
+  document.getElementById('filter-row').style.display='';
   document.querySelectorAll('.dtab').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
   render();
