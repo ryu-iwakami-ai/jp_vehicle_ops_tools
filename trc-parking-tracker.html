@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRC Parking Tracker</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a18;padding:1.25rem;min-height:100vh}
+@media(prefers-color-scheme:dark){body{background:#1a1a18;color:#f0ede6}}
+h1{font-size:20px;font-weight:500;margin-bottom:1rem}
+.topbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.75rem}
+.mode-toggle{display:flex;border:0.5px solid #ccc;border-radius:8px;overflow:hidden}
+.mode-btn{padding:0 14px;height:32px;font-size:13px;border:none;cursor:pointer;background:transparent;color:#666}
+.mode-btn.active{background:#e6f1fb;color:#0c447c;font-weight:500}
+@media(prefers-color-scheme:dark){.mode-btn{color:#aaa}.mode-btn.active{background:#0c447c;color:#e6f1fb}}
+input[type=text],select{font-size:13px;height:32px;padding:0 10px;border:0.5px solid #ccc;border-radius:8px;background:#fff;color:#1a1a18}
+@media(prefers-color-scheme:dark){input[type=text],select{background:#2c2c2a;border-color:#555;color:#f0ede6}}
+input[type=text]{width:150px}
+.btn{height:32px;padding:0 13px;font-size:13px;border:0.5px solid #ccc;border-radius:8px;background:#fff;color:#1a1a18;cursor:pointer}
+.btn:hover{background:#f0ede6}
+@media(prefers-color-scheme:dark){.btn{background:#2c2c2a;border-color:#555;color:#f0ede6}.btn:hover{background:#3a3a37}}
+.btn-primary{background:#e6f1fb;color:#0c447c;border-color:#b5d4f4}
+.btn-primary:hover{background:#b5d4f4}
+.edit-only{display:none}
+.edit-mode .edit-only{display:inline-flex}
+.edit-mode .view-only{display:none}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:7px;margin-bottom:.75rem}
+.stat{background:#ebebea;border-radius:8px;padding:9px 11px}
+@media(prefers-color-scheme:dark){.stat{background:#2c2c2a}}
+.stat-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.stat-val{font-size:20px;font-weight:500}
+.zones{display:flex;flex-direction:column;gap:10px}
+.zone-wrap{border:0.5px solid rgba(0,0,0,.15);border-radius:12px;overflow:visible;position:relative;background:#fff}
+@media(prefers-color-scheme:dark){.zone-wrap{background:#242422;border-color:#444}}
+.zone-header{display:flex;align-items:center;justify-content:space-between;padding:7px 11px;background:#f5f5f3;border-bottom:0.5px solid rgba(0,0,0,.1);gap:6px;border-radius:12px 12px 0 0;position:relative}
+@media(prefers-color-scheme:dark){.zone-header{background:#2c2c2a;border-color:#444}}
+.zone-img-preview{width:28px;height:28px;border-radius:6px;object-fit:cover;border:0.5px solid #ccc;flex-shrink:0}
+.zone-img-placeholder{width:28px;height:28px;border-radius:6px;background:#fff;border:0.5px dashed #ccc;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;color:#aaa}
+.edit-mode .zone-img-preview,.edit-mode .zone-img-placeholder{cursor:pointer}
+.zone-tooltip{display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:50;background:#fff;border:0.5px solid #ccc;border-radius:10px;padding:6px;width:220px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+@media(prefers-color-scheme:dark){.zone-tooltip{background:#2c2c2a;border-color:#555}}
+.zone-tooltip img{width:100%;border-radius:6px;display:block}
+.zone-tooltip .no-img{font-size:12px;color:#aaa;padding:8px;text-align:center}
+.zone-header:hover .zone-tooltip{display:block}
+.zone-name-display{font-size:13px;font-weight:500}
+.edit-mode .zone-name-display{cursor:pointer;padding:2px 5px;border-radius:4px}
+.edit-mode .zone-name-display:hover{background:#fff}
+.zone-name-input{font-size:13px;font-weight:500;height:26px;padding:0 6px;border:1px solid #378add;border-radius:4px;background:#fff;color:#1a1a18;width:180px}
+.zone-right{display:flex;align-items:center;gap:6px}
+.zone-count{font-size:12px;color:#888}
+.zbadge{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500}
+.zbadge-cyan{background:#cff8f0;color:#085041}
+.zbadge-green{background:#c0dd97;color:#27500A}
+.zbadge-purple{background:#CECBF6;color:#3C3489}
+.zbadge-gray{background:#D3D1C7;color:#444441}
+.zbadge-blue{background:#B5D4F4;color:#0C447C}
+.icon-btn{background:none;border:0.5px solid #ccc;cursor:pointer;font-size:12px;padding:2px 7px;color:#555;border-radius:6px}
+.icon-btn:hover{background:#f0ede6}
+.icon-btn.danger{color:#a32d2d;border-color:#f09595}
+@media(prefers-color-scheme:dark){.icon-btn{border-color:#555;color:#aaa}.icon-btn:hover{background:#3a3a37}}
+.spots{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:7px;padding:9px}
+.spot{border:0.5px solid rgba(0,0,0,.15);border-radius:8px;padding:8px 10px;transition:border-color .15s}
+@media(prefers-color-scheme:dark){.spot{border-color:#444}}
+.spot:hover{border-color:#888}
+.spot.occupied{background:#fff}
+@media(prefers-color-scheme:dark){.spot.occupied{background:#1e1e1c}}
+.spot.empty{background:#f9f9f8}
+@media(prefers-color-scheme:dark){.spot.empty{background:#242422}}
+.spot.empty.view-clickable{cursor:pointer}
+.spot-id-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px}
+.spot-id{font-size:11px;color:#888}
+.edit-mode .spot-id{cursor:pointer;padding:1px 3px;border-radius:3px}
+.edit-mode .spot-id:hover{background:#f0ede6}
+.spot-id-input{font-size:11px;height:19px;padding:0 3px;border:1px solid #378add;border-radius:3px;background:#fff;color:#1a1a18;width:66px}
+.vehicle-badge{display:inline-block;font-size:11px;font-weight:500;padding:2px 7px;border-radius:8px;margin-bottom:2px}
+.vtype-pill{display:inline-block;font-size:10px;padding:1px 6px;border-radius:10px;margin-bottom:3px;font-weight:500}
+.vtype-truck{background:#e6f1fb;color:#0c447c}
+.vtype-sds{background:#CECBF6;color:#3C3489}
+.vtype-support{background:#c0dd97;color:#27500A}
+.vtype-personal{background:#faeeda;color:#633806}
+.vehicle-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vehicle-time{font-size:11px;color:#888;margin-top:1px}
+.empty-label{font-size:11px;color:#aaa;font-style:italic}
+.spot-actions{display:flex;gap:3px;margin-top:6px;flex-wrap:wrap}
+.spot-btn{font-size:11px;padding:1px 6px;height:20px;border:0.5px solid #ccc;border-radius:6px;background:transparent;color:#666;cursor:pointer}
+.spot-btn:hover{background:#f0ede6}
+.spot-btn.danger{color:#a32d2d;border-color:#f09595}
+@media(prefers-color-scheme:dark){.spot-btn{border-color:#555;color:#aaa}.spot-btn:hover{background:#3a3a37}}
+.confirm-bar{background:#fff3cd;border:0.5px solid #f0c040;border-radius:8px;padding:8px 12px;font-size:12px;color:#633806;display:flex;align-items:center;gap:8px;margin-bottom:.5rem}
+.confirm-bar button{font-size:11px;padding:2px 9px;height:22px;border-radius:5px;cursor:pointer;border:0.5px solid}
+.confirm-yes{background:#fdecea;color:#a32d2d;border-color:#f09595}
+.confirm-no{background:#f0f0ee;color:#555;border-color:#ccc}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border:0.5px solid #ddd;border-radius:12px;padding:1.1rem;width:300px;max-width:90vw}
+@media(prefers-color-scheme:dark){.modal{background:#2c2c2a;border-color:#555}}
+.modal h3{font-size:14px;font-weight:500;margin-bottom:10px}
+.modal label{display:block;font-size:12px;color:#888;margin-bottom:3px;margin-top:9px}
+.modal input,.modal select{width:100%;height:32px;padding:0 9px;font-size:13px;border:0.5px solid #ccc;border-radius:8px;background:#fff;color:#1a1a18}
+@media(prefers-color-scheme:dark){.modal input,.modal select{background:#1e1e1c;border-color:#555;color:#f0ede6}}
+.modal-actions{display:flex;gap:7px;margin-top:13px;justify-content:flex-end}
+.edit-banner{background:#faeeda;border:0.5px solid #ef9f27;border-radius:8px;padding:6px 12px;font-size:12px;color:#633806;margin-bottom:.6rem;display:none}
+.edit-mode .edit-banner{display:block}
+.floor-label{font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.06em;margin:8px 2px 4px}
+.truck-registry{border:0.5px solid rgba(0,0,0,.15);border-radius:12px;overflow:hidden;margin-bottom:1rem;background:#fff}
+@media(prefers-color-scheme:dark){.truck-registry{background:#242422;border-color:#444}}
+.truck-registry-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f5f5f3;border-bottom:0.5px solid rgba(0,0,0,.1);cursor:pointer;user-select:none}
+@media(prefers-color-scheme:dark){.truck-registry-header{background:#2c2c2a;border-color:#444}}
+.truck-registry-title{font-size:13px;font-weight:500}
+.truck-registry-body{padding:10px 12px;display:none}
+.truck-registry-body.open{display:block}
+.reg-type-section{margin-bottom:10px}
+.reg-type-label{font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.truck-list{display:flex;flex-wrap:wrap;gap:5px}
+.truck-chip{display:flex;align-items:center;gap:4px;padding:3px 8px 3px 10px;border-radius:20px;font-size:12px;font-weight:500}
+.truck-chip-del{background:none;border:none;cursor:pointer;font-size:13px;line-height:1;padding:0 2px;opacity:.6}
+.truck-chip-del:hover{opacity:1}
+.truck-add-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:0.5px solid rgba(0,0,0,.1)}
+@media(prefers-color-scheme:dark){.truck-add-row{border-color:#444}}
+.truck-add-row input{height:30px;font-size:13px;padding:0 9px;border:0.5px solid #ccc;border-radius:8px;background:#fff;color:#1a1a18;width:110px}
+@media(prefers-color-scheme:dark){.truck-add-row input{background:#1e1e1c;border-color:#555;color:#f0ede6}}
+.truck-add-row select{height:30px;font-size:12px;padding:0 6px}
+.truck-add-row .btn{height:30px;font-size:12px}
+</style>
+</head>
+<body>
+<h1>TRC Parking Tracker</h1>
+<div id="root">
+<div class="topbar">
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="btnView" onclick="setMode('view')">View</button>
+    <button class="mode-btn" id="btnEdit" onclick="setMode('edit')">Edit</button>
+  </div>
+  <input type="text" id="searchBox" placeholder="Search vehicle or spot…" oninput="render()">
+  <select id="filterStatus" onchange="render()">
+    <option value="all">All spots</option>
+    <option value="occupied">Occupied</option>
+    <option value="empty">Empty</option>
+  </select>
+  <select id="filterType" onchange="render()">
+    <option value="all">All types</option>
+    <option value="truck">Truck</option>
+    <option value="sds">SDS car</option>
+    <option value="support">Support car</option>
+    <option value="personal">Personal</option>
+  </select>
+  <button class="btn btn-primary view-only" onclick="openAssignModal()">+ Assign vehicle</button>
+  <button class="btn edit-only" onclick="addZonePrompt()">+ Add zone</button>
+</div>
+<div class="edit-banner">Edit mode — renaming, adding, and deleting are enabled. Switch to View when done.</div>
+<div id="confirmArea"></div>
+<div class="stats" id="stats"></div>
+<div class="truck-registry">
+  <div class="truck-registry-header" onclick="toggleRegistry()">
+    <span class="truck-registry-title">Vehicle fleet <span id="registryCount" style="font-weight:400;color:#888"></span></span>
+    <span id="registryChevron" style="font-size:13px;color:#888">&#9650;</span>
+  </div>
+  <div class="truck-registry-body open" id="registryBody">
+    <div id="truckListArea"></div>
+    <div class="truck-add-row" id="truckAddRow" style="display:none">
+      <input type="text" id="newTruckId" placeholder="e.g. HD19" onkeydown="if(event.key==='Enter')addTruck()">
+      <select id="newTruckType">
+        <option value="truck">Truck</option>
+        <option value="sds">SDS car</option>
+        <option value="support">Support car</option>
+        <option value="personal">Personal</option>
+      </select>
+      <button class="btn btn-primary" onclick="addTruck()">+ Add</button>
+    </div>
+  </div>
+</div>
+<div class="zones" id="zonesEl"></div>
+</div>
+
+<div class="modal-bg" id="modalBg" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 id="modalTitle">Assign vehicle to spot</h3>
+    <label>Filter by type</label>
+    <select id="mVehicleType" onchange="populateVehicleDropdown()">
+      <option value="all">All types</option>
+      <option value="truck">Truck</option>
+      <option value="sds">SDS car</option>
+      <option value="support">Support car</option>
+      <option value="personal">Personal</option>
+    </select>
+    <label>Vehicle</label>
+    <select id="mVehicleId"></select>
+    <label>Driver (optional)</label>
+    <input id="mDriver" placeholder="e.g. Tanaka Hiroshi">
+    <label>Spot</label>
+    <select id="mSpot"></select>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmAssign()">Assign</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY='trc_parking_v5';
+const TYPE_LABELS={truck:'Truck',sds:'SDS car',support:'Support car',personal:'Personal'};
+const TYPE_COLORS={
+  truck:['#e6f1fb','#0c447c'],
+  sds:['#CECBF6','#3C3489'],
+  support:['#c0dd97','#27500A'],
+  personal:['#faeeda','#633806']
+};
+function vehicleColor(type){return TYPE_COLORS[type]||['#D3D1C7','#444441'];}
+function typePill(type){return `<span class="vtype-pill vtype-${type||'truck'}">${TYPE_LABELS[type]||type||''}</span>`;}
+function nowTime(){const d=new Date();return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}
+
+let editMode=false;
+function setMode(m){
+  editMode=(m==='edit');
+  document.getElementById('btnView').classList.toggle('active',!editMode);
+  document.getElementById('btnEdit').classList.toggle('active',editMode);
+  document.getElementById('root').classList.toggle('edit-mode',editMode);
+  document.getElementById('truckAddRow').style.display=editMode?'flex':'none';
+  renderRegistry();render();
+}
+
+const ZBADGE={'トラック&SDS':'zbadge-cyan','サポカ':'zbadge-green','従業員':'zbadge-purple','トラック(屋上)':'zbadge-cyan','未割当':'zbadge-gray','AW3-3':'zbadge-blue','AW3-4':'zbadge-blue'};
+function zoneBadge(name){return ZBADGE[name]||'zbadge-gray';}
+
+const DEFAULT_TRUCKS=[];
+for(let i=6;i<=18;i++) DEFAULT_TRUCKS.push({id:'HD'+i,type:'truck'});
+
+function defaultState(){return{
+  zones:[
+    {id:'z_aw33',name:'AW3-3',floor:'Garage'},
+    {id:'z_aw34',name:'AW3-4',floor:'Garage'},
+    {id:'z_trsds',name:'トラック&SDS',floor:'Roof'},
+    {id:'z_sapoka',name:'サポカ',floor:'Roof'},
+    {id:'z_staff',name:'従業員',floor:'Roof'},
+    {id:'z_truck_roof',name:'トラック(屋上)',floor:'Roof'},
+    {id:'z_unassigned',name:'未割当',floor:'Roof'},
+  ],
+  spots:[
+    {id:'3-1',zone:'z_aw33'},{id:'3-2',zone:'z_aw33'},{id:'3-3',zone:'z_aw33'},{id:'3-4',zone:'z_aw33'},{id:'3-5',zone:'z_aw33'},{id:'3-6',zone:'z_aw33'},
+    {id:'4-1',zone:'z_aw34'},{id:'4-2',zone:'z_aw34'},{id:'4-3',zone:'z_aw34'},{id:'4-4',zone:'z_aw34'},{id:'4-5',zone:'z_aw34'},{id:'P1',zone:'z_aw34'},{id:'P2',zone:'z_aw34'},
+    {id:'93',zone:'z_trsds'},{id:'92',zone:'z_trsds'},{id:'91',zone:'z_trsds'},{id:'90',zone:'z_trsds'},{id:'89',zone:'z_trsds'},
+    {id:'88',zone:'z_sapoka'},{id:'87',zone:'z_sapoka'},
+    {id:'86',zone:'z_staff'},{id:'85',zone:'z_staff'},{id:'84',zone:'z_staff'},
+    {id:'151',zone:'z_truck_roof'},{id:'150',zone:'z_truck_roof'},{id:'149',zone:'z_truck_roof'},{id:'148',zone:'z_truck_roof'},{id:'147',zone:'z_truck_roof'},
+    {id:'146',zone:'z_unassigned'},{id:'145',zone:'z_unassigned'},{id:'144',zone:'z_unassigned'},{id:'143',zone:'z_unassigned'},{id:'142',zone:'z_unassigned'},
+  ],
+  assignments:{},
+  zoneImages:{},
+  trucks:[...DEFAULT_TRUCKS]
+};}
+
+function loadState(){
+  try{
+    const s=localStorage.getItem(STORAGE_KEY);
+    if(s){
+      const p=JSON.parse(s);
+      if(!p.trucks) p.trucks=[...DEFAULT_TRUCKS];
+      else p.trucks=p.trucks.map(t=>typeof t==='string'?{id:t,type:'truck'}:t);
+      if(!p.zoneImages) p.zoneImages={};
+      return p;
+    }
+  }catch(e){}
+  return defaultState();
+}
+function saveState(){
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify({zones:state.zones,spots:state.spots,assignments:state.assignments,zoneImages:state.zoneImages,trucks:state.trucks}));}catch(e){}
+}
+
+let state={...loadState(),editingZone:null,editingSpot:null};
+let pendingDelete=null,moveFrom=null;
+
+function askConfirm(msg,onYes){
+  pendingDelete={msg,onYes};
+  document.getElementById('confirmArea').innerHTML=`<div class="confirm-bar">
+    <span style="flex:1">${msg}</span>
+    <button class="confirm-yes" onclick="confirmYes()">Delete</button>
+    <button class="confirm-no" onclick="confirmNo()">Cancel</button>
+  </div>`;
+}
+function confirmYes(){if(pendingDelete){pendingDelete.onYes();pendingDelete=null;document.getElementById('confirmArea').innerHTML='';saveState();renderRegistry();render();}}
+function confirmNo(){pendingDelete=null;document.getElementById('confirmArea').innerHTML='';}
+
+function startEditZone(zid){if(!editMode)return;state.editingZone=zid;state.editingSpot=null;render();setTimeout(()=>{const e=document.getElementById('zname-'+zid);if(e){e.focus();e.select();}},30);}
+function saveZoneName(zid){const e=document.getElementById('zname-'+zid);if(e){const v=e.value.trim();if(v)state.zones.find(z=>z.id===zid).name=v;}state.editingZone=null;saveState();render();}
+function startEditSpot(sid){if(!editMode)return;state.editingSpot=sid;state.editingZone=null;render();setTimeout(()=>{const e=document.getElementById('sname-'+sid);if(e){e.focus();e.select();}},30);}
+function saveSpotName(sid){
+  const e=document.getElementById('sname-'+sid);
+  if(e){const nid=e.value.trim();if(nid&&nid!==sid){const sp=state.spots.find(s=>s.id===sid);if(sp){sp.id=nid;if(state.assignments[sid]){state.assignments[nid]=state.assignments[sid];delete state.assignments[sid];}}}}
+  state.editingSpot=null;saveState();render();
+}
+function deleteZone(zid){
+  const z=state.zones.find(x=>x.id===zid);
+  askConfirm(`Delete zone "${z?.name}" and all its spots?`,()=>{
+    state.spots.filter(s=>s.zone===zid).forEach(s=>delete state.assignments[s.id]);
+    state.spots=state.spots.filter(s=>s.zone!==zid);
+    state.zones=state.zones.filter(z=>z.id!==zid);
+    delete state.zoneImages[zid];
+  });
+}
+function deleteSpot(sid){askConfirm(`Delete spot "${sid}"?`,()=>{state.spots=state.spots.filter(s=>s.id!==sid);delete state.assignments[sid];});}
+function addSpotToZone(zid){
+  const prefix=state.zones.find(z=>z.id===zid)?.name.replace(/\s+/g,'').slice(0,3)||'SP';
+  let n=1;while(state.spots.find(s=>s.id===prefix+n))n++;
+  state.spots.push({id:prefix+n,zone:zid});saveState();render();
+}
+function removeAssignment(sid){delete state.assignments[sid];saveState();renderRegistry();render();}
+function moveAssignment(sid){moveFrom=sid;openAssignModal(null,sid);}
+
+function toggleRegistry(){
+  const body=document.getElementById('registryBody');
+  const chev=document.getElementById('registryChevron');
+  body.classList.toggle('open');
+  chev.innerHTML=body.classList.contains('open')?'&#9650;':'&#9660;';
+}
+
+function renderRegistry(){
+  const area=document.getElementById('truckListArea');
+  const count=document.getElementById('registryCount');
+  if(!area)return;
+  const assigned=new Set(Object.values(state.assignments).map(a=>a.vehicle));
+  count.textContent='('+state.trucks.length+')';
+  const typeOrder=['truck','sds','support','personal'];
+  let html='';
+  for(const type of typeOrder){
+    const group=state.trucks.filter(t=>t.type===type);
+    if(!group.length)continue;
+    const [bg,fg]=TYPE_COLORS[type];
+    html+='<div class="reg-type-section"><div class="reg-type-label">'+TYPE_LABELS[type]+'</div><div class="truck-list">';
+    html+=group.map(t=>{
+      const isParked=assigned.has(t.id);
+      const dot=isParked?'<span style="width:6px;height:6px;border-radius:50%;background:'+fg+';opacity:.7;display:inline-block"></span>':'';
+      const del=editMode?'<button class="truck-chip-del" onclick="removeTruck(\''+t.id+'\')" title="Remove" style="color:'+fg+'">x</button>':'';
+      return '<span class="truck-chip" style="background:'+bg+';color:'+fg+'">'+dot+t.id+del+'</span>';
+    }).join('');
+    html+='</div></div>';
+  }
+  area.innerHTML=html||'<div style="font-size:12px;color:#aaa;padding:4px 0">No vehicles registered</div>';
+}
+
+function addTruck(){
+  const inp=document.getElementById('newTruckId');
+  const type=document.getElementById('newTruckType').value;
+  const val=inp.value.trim().toUpperCase();
+  if(!val)return;
+  if(state.trucks.find(t=>t.id===val)){alert(val+' is already in the fleet.');return;}
+  state.trucks.push({id:val,type});
+  state.trucks.sort((a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true}));
+  inp.value='';
+  saveState();renderRegistry();
+}
+function removeTruck(id){
+  if(Object.values(state.assignments).some(a=>a.vehicle===id)){
+    if(!confirm(id+' is currently parked. Remove from fleet anyway?'))return;
+  }
+  askConfirm('Remove '+id+' from the fleet?',()=>{state.trucks=state.trucks.filter(t=>t.id!==id);renderRegistry();});
+}
+
+function triggerImageUpload(zid){
+  if(!editMode)return;
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+  inp.onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=ev=>{state.zoneImages[zid]=ev.target.result;saveState();render();};rd.readAsDataURL(f);};
+  inp.click();
+}
+
+function populateVehicleDropdown(){
+  const typeFilter=document.getElementById('mVehicleType').value;
+  const el=document.getElementById('mVehicleId');
+  const usedVehicles=new Set(Object.values(state.assignments).map(a=>a.vehicle));
+  const list=typeFilter==='all'?state.trucks:state.trucks.filter(t=>t.type===typeFilter);
+  el.innerHTML='<option value="">-- select vehicle --</option>';
+  list.forEach(t=>{
+    const inUse=usedVehicles.has(t.id);
+    const opt=document.createElement('option');
+    opt.value=t.id;
+    opt.dataset.type=t.type;
+    opt.disabled=inUse;
+    opt.textContent=t.id+' ('+TYPE_LABELS[t.type]+')'+( inUse?' — parked':'');
+    el.appendChild(opt);
+  });
+}
+
+function openAssignModal(spotId=null,fromSpot=null){
+  moveFrom=fromSpot;
+  const empties=fromSpot
+    ?state.spots.filter(s=>!state.assignments[s.id]&&s.id!==fromSpot)
+    :state.spots.filter(s=>!state.assignments[s.id]);
+  const spotEl=document.getElementById('mSpot');spotEl.innerHTML='';
+  if(spotId){spotEl.innerHTML='<option value="'+spotId+'">'+spotId+'</option>';}
+  else{empties.forEach(s=>{const zn=state.zones.find(z=>z.id===s.zone)?.name||s.zone;spotEl.innerHTML+='<option value="'+s.id+'">'+s.id+' ('+zn+')</option>';});}
+  document.getElementById('modalTitle').textContent=fromSpot?'Move vehicle to new spot':'Assign vehicle to spot';
+  const typeEl=document.getElementById('mVehicleType');
+  const vehicleEl=document.getElementById('mVehicleId');
+  if(fromSpot){
+    const prev=state.assignments[fromSpot];
+    typeEl.value=prev?.vtype||'all';typeEl.disabled=true;
+    vehicleEl.innerHTML='<option value="'+(prev?.vehicle||'')+'">'+( prev?.vehicle||'')+'</option>';
+    vehicleEl.disabled=true;
+    document.getElementById('mDriver').value=prev?.driver||'';
+    document.getElementById('mDriver').disabled=true;
+  } else {
+    typeEl.value='all';typeEl.disabled=false;
+    vehicleEl.disabled=false;
+    populateVehicleDropdown();
+    document.getElementById('mDriver').value='';
+    document.getElementById('mDriver').disabled=false;
+  }
+  document.getElementById('modalBg').classList.add('open');
+}
+function closeModal(e){if(!e||e.target===document.getElementById('modalBg'))document.getElementById('modalBg').classList.remove('open');}
+function confirmAssign(){
+  const vehicleId=document.getElementById('mVehicleId').value.trim();
+  const driver=document.getElementById('mDriver').value.trim();
+  const spot=document.getElementById('mSpot').value;
+  if(!spot)return;
+  if(moveFrom){
+    state.assignments[spot]={...state.assignments[moveFrom],since:nowTime()};
+    delete state.assignments[moveFrom];
+  } else {
+    if(!vehicleId){alert('Please select a vehicle.');return;}
+    const obj=state.trucks.find(t=>t.id===vehicleId);
+    state.assignments[spot]={vehicle:vehicleId,vtype:obj?.type||'truck',driver,since:nowTime()};
+  }
+  document.getElementById('modalBg').classList.remove('open');
+  saveState();renderRegistry();render();
+}
+function addZonePrompt(){
+  const name=prompt('Zone name:');if(!name)return;
+  const floor=prompt('Floor (Garage or Roof):','Roof')||'Roof';
+  const zid='z_'+Date.now();state.zones.push({id:zid,name,floor});
+  const count=parseInt(prompt('How many spots?')||'4');
+  const prefix=name.replace(/\s+/g,'').slice(0,3);
+  for(let i=1;i<=count;i++)state.spots.push({id:prefix+i,zone:zid});
+  saveState();render();
+}
+
+function render(){
+  const q=document.getElementById('searchBox').value.toLowerCase();
+  const fs=document.getElementById('filterStatus').value;
+  const ft=document.getElementById('filterType').value;
+  const total=state.spots.length,occ=Object.keys(state.assignments).length;
+  document.getElementById('stats').innerHTML=
+    '<div class="stat"><div class="stat-label">Total spots</div><div class="stat-val">'+total+'</div></div>'+
+    '<div class="stat"><div class="stat-label">Occupied</div><div class="stat-val" style="color:#1D9E75">'+occ+'</div></div>'+
+    '<div class="stat"><div class="stat-label">Available</div><div class="stat-val">'+(total-occ)+'</div></div>'+
+    '<div class="stat"><div class="stat-label">Utilization</div><div class="stat-val">'+Math.round(occ/total*100)+'%</div></div>';
+  const floors=['Garage','Roof'];
+  let html='';
+  for(const floor of floors){
+    const fzones=state.zones.filter(z=>z.floor===floor);
+    if(!fzones.length)continue;
+    html+='<div class="floor-label">'+floor+'</div>';
+    for(const zone of fzones){
+      const zSpots=state.spots.filter(s=>s.zone===zone.id);
+      const zOcc=zSpots.filter(s=>state.assignments[s.id]).length;
+      const isEZ=state.editingZone===zone.id;
+      const img=state.zoneImages[zone.id];
+      const imgEl=img
+        ?'<img class="zone-img-preview" src="'+img+'" onclick="triggerImageUpload(\''+zone.id+'\')" title="Click to change image">'
+        :'<div class="zone-img-placeholder" onclick="triggerImageUpload(\''+zone.id+'\')" title="Add zone image">+</div>';
+      const tooltipContent=img?'<img src="'+img+'" alt="zone">':"<div class='no-img'>No image yet"+(editMode?' — click + to add':'')+'</div>';
+      const zoneNameHtml=isEZ
+        ?'<input class="zone-name-input" id="zname-'+zone.id+'" value="'+zone.name+'" onblur="saveZoneName(\''+zone.id+'\')" onkeydown="if(event.key===\'Enter\')saveZoneName(\''+zone.id+'\');if(event.key===\'Escape\'){state.editingZone=null;render();}">'
+        :'<span class="zone-name-display" onclick="'+(editMode?'startEditZone(\''+zone.id+'\')':'')+'">'+zone.name+'</span>';
+      const badge='<span class="zbadge '+zoneBadge(zone.name)+'">'+zone.floor+'</span>';
+      const editControls=editMode?'<button class="icon-btn edit-only" onclick="addSpotToZone(\''+zone.id+'\')">+ spot</button><button class="icon-btn danger edit-only" onclick="deleteZone(\''+zone.id+'\')">x zone</button>':'';
+      let spotsHtml='',visible=0;
+      for(const spot of zSpots){
+        const asgn=state.assignments[spot.id];
+        const isOcc=!!asgn;
+        if(fs==='occupied'&&!isOcc) continue;
+        if(fs==='empty'&&isOcc) continue;
+        if(ft!=='all'){
+          if(!isOcc) continue;
+          if(asgn.vtype!==ft) continue;
+        }
+        const vid=asgn?.vehicle||'';
+        const vdriver=asgn?.driver||'';
+        if(q&&!spot.id.toLowerCase().includes(q)&&!vid.toLowerCase().includes(q)&&!vdriver.toLowerCase().includes(q)) continue;
+        visible++;
+        const isES=state.editingSpot===spot.id;
+        const spotIdHtml=isES
+          ?'<input class="spot-id-input" id="sname-'+spot.id+'" value="'+spot.id+'" onblur="saveSpotName(\''+spot.id+'\')" onkeydown="if(event.key===\'Enter\')saveSpotName(\''+spot.id+'\');if(event.key===\'Escape\'){state.editingSpot=null;render();}">'
+          :'<span class="spot-id" onclick="'+(editMode?'startEditSpot(\''+spot.id+'\')':'')+'">'+spot.id+(editMode?' &#9998;':'')+'</span>';
+        if(isOcc){
+          const [bg,fg]=vehicleColor(asgn.vtype);
+          spotsHtml+='<div class="spot occupied">'+
+            '<div class="spot-id-row">'+spotIdHtml+'</div>'+
+            typePill(asgn.vtype)+
+            '<span class="vehicle-badge" style="background:'+bg+';color:'+fg+'">'+vid+'</span>'+
+            '<div class="vehicle-name">'+(vdriver||'No driver')+'</div>'+
+            '<div class="vehicle-time">Since '+asgn.since+'</div>'+
+            '<div class="spot-actions">'+
+              '<button class="spot-btn" onclick="removeAssignment(\''+spot.id+'\')">Remove</button>'+
+              '<button class="spot-btn" onclick="moveAssignment(\''+spot.id+'\')">Move</button>'+
+              (editMode?'<button class="spot-btn danger edit-only" onclick="deleteSpot(\''+spot.id+'\')">Del</button>':'')+
+            '</div></div>';
+        } else {
+          spotsHtml+='<div class="spot empty '+(!editMode?'view-clickable':'')+'" onclick="'+(!editMode?'openAssignModal(\''+spot.id+'\')':'')+'" >'+
+            '<div class="spot-id-row" onclick="event.stopPropagation()">'+spotIdHtml+'</div>'+
+            '<div class="empty-label">'+(editMode?'Empty':'Click to assign')+'</div>'+
+            (editMode?'<div class="spot-actions"><button class="spot-btn danger edit-only" onclick="deleteSpot(\''+spot.id+'\')">Del</button></div>':'')+
+            '</div>';
+        }
+      }
+      if(visible===0&&(q||ft!=='all')) continue;
+      html+='<div class="zone-wrap">'+
+        '<div class="zone-header">'+
+          imgEl+
+          '<div style="display:flex;align-items:center;gap:6px;flex:1">'+zoneNameHtml+badge+'</div>'+
+          '<div class="zone-right"><span class="zone-count">'+zOcc+'/'+zSpots.length+'</span>'+editControls+'</div>'+
+          '<div class="zone-tooltip">'+tooltipContent+'</div>'+
+        '</div>'+
+        '<div class="spots">'+(spotsHtml||'<div style="padding:8px;font-size:12px;color:#888">No matching spots</div>')+'</div>'+
+      '</div>';
+    }
+  }
+  document.getElementById('zonesEl').innerHTML=html;
+}
+render();
+renderRegistry();
+</script>
+</body>
+</html>
