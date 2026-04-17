@@ -22,6 +22,7 @@ input[type=text]{width:150px}
 @media(prefers-color-scheme:dark){.btn{background:#2c2c2a;border-color:#555;color:#f0ede6}.btn:hover{background:#3a3a37}}
 .btn-primary{background:#e6f1fb;color:#0c447c;border-color:#b5d4f4}
 .btn-primary:hover{background:#b5d4f4}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
 .edit-only{display:none}
 .edit-mode .edit-only{display:inline-flex}
 .edit-mode .view-only{display:none}
@@ -68,6 +69,10 @@ input[type=text]{width:150px}
 .spot.empty{background:#f9f9f8}
 @media(prefers-color-scheme:dark){.spot.empty{background:#242422}}
 .spot.empty.view-clickable{cursor:pointer}
+.spot.blocked{background:#fff8f0;border-color:#ef9f27 !important}
+@media(prefers-color-scheme:dark){.spot.blocked{background:#2a2216;border-color:#ef9f27 !important}}
+.blocked-label{font-size:11px;font-weight:500;color:#854F0B;margin-bottom:2px}
+.blocked-note{font-size:11px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .spot-id-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px}
 .spot-id{font-size:11px;color:#888}
 .edit-mode .spot-id{cursor:pointer;padding:1px 3px;border-radius:3px}
@@ -79,6 +84,12 @@ input[type=text]{width:150px}
 .vtype-sds{background:#CECBF6;color:#3C3489}
 .vtype-support{background:#c0dd97;color:#27500A}
 .vtype-personal{background:#faeeda;color:#633806}
+.allowed-types{display:flex;gap:3px;flex-wrap:wrap;align-items:center}
+.allowed-pill{font-size:10px;padding:1px 7px;border-radius:10px;font-weight:500;opacity:.85}
+.allowed-edit-btn{font-size:11px;padding:1px 6px;border:0.5px dashed #ccc;border-radius:6px;background:transparent;color:#888;cursor:pointer}
+.allowed-edit-btn:hover{background:#f0ede6}
+.type-check-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.type-check-row label{display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer}
 .vehicle-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vehicle-time{font-size:11px;color:#888;margin-top:1px}
 .empty-label{font-size:11px;color:#aaa;font-style:italic}
@@ -136,6 +147,7 @@ input[type=text]{width:150px}
   <select id="filterStatus" onchange="render()">
     <option value="all">All spots</option>
     <option value="occupied">Occupied</option>
+    <option value="blocked">Blocked</option>
     <option value="empty">Empty</option>
   </select>
   <select id="filterType" onchange="render()">
@@ -144,6 +156,11 @@ input[type=text]{width:150px}
     <option value="sds">SDS car</option>
     <option value="support">Support car</option>
     <option value="personal">Personal</option>
+  </select>
+  <select id="filterZone" onchange="render()">
+    <option value="all">All locations</option>
+    <option value="Garage">Garage</option>
+    <option value="Roof">Roof</option>
   </select>
   <button class="btn btn-primary view-only" onclick="openAssignModal()">+ Assign vehicle</button>
   <button class="btn edit-only" onclick="addZonePrompt()">+ Add zone</button>
@@ -177,28 +194,68 @@ input[type=text]{width:150px}
   <div class="modal" onclick="event.stopPropagation()">
     <h3 id="modalTitle">Assign vehicle to spot</h3>
     <label>Filter by type</label>
-    <select id="mVehicleType" onchange="populateVehicleDropdown()">
+    <select id="mVehicleType" onchange="populateVehicleDropdown(_currentAllowed)">
       <option value="all">All types</option>
       <option value="truck">Truck</option>
       <option value="sds">SDS car</option>
       <option value="support">Support car</option>
       <option value="personal">Personal</option>
     </select>
+    <div id="mAllowedNote" style="font-size:11px;color:#888;margin-top:3px"></div>
     <label>Vehicle</label>
-    <select id="mVehicleId"></select>
+    <select id="mVehicleId" onchange="document.getElementById('mVehicleErr').style.display='none';document.getElementById('mAssignBtn').disabled=!this.value"></select>
+    <div id="mVehicleErr" style="display:none;font-size:11px;color:#a32d2d;margin-top:3px">Please select a vehicle before assigning.</div>
     <label>Driver (optional)</label>
     <input id="mDriver" placeholder="e.g. Tanaka Hiroshi">
     <label>Spot</label>
     <select id="mSpot"></select>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="confirmAssign()">Assign</button>
+      <button id="mAssignBtn" class="btn btn-primary" onclick="confirmAssign()" disabled>Assign</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="blockModalBg" onclick="closeBlockModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3>Block parking spot</h3>
+    <label>Note (optional)</label>
+    <input type="text" id="blockNote" placeholder="e.g. Reserved for delivery" onkeydown="if(event.key==='Enter')confirmBlock()">
+    <div class="modal-actions">
+      <button class="btn" onclick="closeBlockModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmBlock()">Block spot</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="zoneModalBg" onclick="closeZoneModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3>Add new zone</h3>
+    <label>Zone name</label>
+    <input type="text" id="zNewName" placeholder="e.g. Zone D" onkeydown="if(event.key==='Enter')confirmAddZone()">
+    <label>Floor</label>
+    <select id="zNewFloor">
+      <option value="Garage">Garage</option>
+      <option value="Roof" selected>Roof</option>
+    </select>
+    <label>Number of spots</label>
+    <input type="text" id="zNewCount" value="4" style="width:80px">
+    <label>Allowed vehicle types</label>
+    <div class="type-check-row">
+      <label><input type="checkbox" id="zNewType_truck" checked> Truck</label>
+      <label><input type="checkbox" id="zNewType_sds" checked> SDS car</label>
+      <label><input type="checkbox" id="zNewType_support" checked> Support car</label>
+      <label><input type="checkbox" id="zNewType_personal" checked> Personal</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeZoneModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmAddZone()">Add zone</button>
     </div>
   </div>
 </div>
 
 <script>
-const STORAGE_KEY='trc_parking_v5';
+const STORAGE_KEY='trc_parking_v7';
 const TYPE_LABELS={truck:'Truck',sds:'SDS car',support:'Support car',personal:'Personal'};
 const TYPE_COLORS={
   truck:['#e6f1fb','#0c447c'],
@@ -228,13 +285,13 @@ for(let i=6;i<=18;i++) DEFAULT_TRUCKS.push({id:'HD'+i,type:'truck'});
 
 function defaultState(){return{
   zones:[
-    {id:'z_aw33',name:'AW3-3',floor:'Garage'},
-    {id:'z_aw34',name:'AW3-4',floor:'Garage'},
-    {id:'z_trsds',name:'トラック&SDS',floor:'Roof'},
-    {id:'z_sapoka',name:'サポカ',floor:'Roof'},
-    {id:'z_staff',name:'従業員',floor:'Roof'},
-    {id:'z_truck_roof',name:'トラック(屋上)',floor:'Roof'},
-    {id:'z_unassigned',name:'未割当',floor:'Roof'},
+    {id:'z_aw33',name:'AW3-3',floor:'Garage',allowedTypes:['truck','sds']},
+    {id:'z_aw34',name:'AW3-4',floor:'Garage',allowedTypes:['truck','sds']},
+    {id:'z_trsds',name:'トラック&SDS',floor:'Roof',allowedTypes:['truck','sds']},
+    {id:'z_sapoka',name:'サポカ',floor:'Roof',allowedTypes:['support']},
+    {id:'z_staff',name:'従業員',floor:'Roof',allowedTypes:['personal']},
+    {id:'z_truck_roof',name:'トラック(屋上)',floor:'Roof',allowedTypes:['truck']},
+    {id:'z_unassigned',name:'未割当',floor:'Roof',allowedTypes:['truck','sds','support','personal']},
   ],
   spots:[
     {id:'3-1',zone:'z_aw33'},{id:'3-2',zone:'z_aw33'},{id:'3-3',zone:'z_aw33'},{id:'3-4',zone:'z_aw33'},{id:'3-5',zone:'z_aw33'},{id:'3-6',zone:'z_aw33'},
@@ -258,6 +315,7 @@ function loadState(){
       if(!p.trucks) p.trucks=[...DEFAULT_TRUCKS];
       else p.trucks=p.trucks.map(t=>typeof t==='string'?{id:t,type:'truck'}:t);
       if(!p.zoneImages) p.zoneImages={};
+      if(p.zones) p.zones=p.zones.map(z=>({allowedTypes:['truck','sds','support','personal'],...z}));
       return p;
     }
   }catch(e){}
@@ -268,7 +326,7 @@ function saveState(){
 }
 
 let state={...loadState(),editingZone:null,editingSpot:null};
-let pendingDelete=null,moveFrom=null;
+let pendingDelete=null,moveFrom=null,_currentAllowed=null;
 
 function askConfirm(msg,onYes){
   pendingDelete={msg,onYes};
@@ -363,11 +421,13 @@ function triggerImageUpload(zid){
   inp.click();
 }
 
-function populateVehicleDropdown(){
+function populateVehicleDropdown(zoneAllowed){
   const typeFilter=document.getElementById('mVehicleType').value;
   const el=document.getElementById('mVehicleId');
   const usedVehicles=new Set(Object.values(state.assignments).map(a=>a.vehicle));
-  const list=typeFilter==='all'?state.trucks:state.trucks.filter(t=>t.type===typeFilter);
+  let list=state.trucks;
+  if(zoneAllowed&&zoneAllowed.length) list=list.filter(t=>zoneAllowed.includes(t.type));
+  if(typeFilter!=='all') list=list.filter(t=>t.type===typeFilter);
   el.innerHTML='<option value="">-- select vehicle --</option>';
   list.forEach(t=>{
     const inUse=usedVehicles.has(t.id);
@@ -378,6 +438,8 @@ function populateVehicleDropdown(){
     opt.textContent=t.id+' ('+TYPE_LABELS[t.type]+')'+( inUse?' — parked':'');
     el.appendChild(opt);
   });
+  const btn=document.getElementById('mAssignBtn');
+  if(btn) btn.disabled=!el.value;
 }
 
 function openAssignModal(spotId=null,fromSpot=null){
@@ -391,6 +453,10 @@ function openAssignModal(spotId=null,fromSpot=null){
   document.getElementById('modalTitle').textContent=fromSpot?'Move vehicle to new spot':'Assign vehicle to spot';
   const typeEl=document.getElementById('mVehicleType');
   const vehicleEl=document.getElementById('mVehicleId');
+  const zoneId=spotId?state.spots.find(s=>s.id===spotId)?.zone:null;
+  const zone=zoneId?state.zones.find(z=>z.id===zoneId):null;
+  const allowed=zone?.allowedTypes||null;
+  _currentAllowed=allowed;
   if(fromSpot){
     const prev=state.assignments[fromSpot];
     typeEl.value=prev?.vtype||'all';typeEl.disabled=true;
@@ -401,11 +467,40 @@ function openAssignModal(spotId=null,fromSpot=null){
   } else {
     typeEl.value='all';typeEl.disabled=false;
     vehicleEl.disabled=false;
-    populateVehicleDropdown();
+    populateVehicleDropdown(allowed);
+    document.getElementById('mVehicleErr').style.display='none';
+    document.getElementById('mAssignBtn').disabled=!vehicleEl.value;
     document.getElementById('mDriver').value='';
     document.getElementById('mDriver').disabled=false;
+    if(allowed&&allowed.length<4){
+      document.getElementById('mAllowedNote').textContent='This zone accepts: '+allowed.map(t=>TYPE_LABELS[t]).join(', ');
+    } else {
+      document.getElementById('mAllowedNote').textContent='';
+    }
   }
   document.getElementById('modalBg').classList.add('open');
+}
+let _blockingSpot=null;
+function openBlockModal(sid){
+  _blockingSpot=sid;
+  document.getElementById('blockNote').value='';
+  document.getElementById('blockModalBg').classList.add('open');
+  setTimeout(()=>document.getElementById('blockNote').focus(),50);
+}
+function closeBlockModal(e){
+  if(!e||e.target===document.getElementById('blockModalBg'))
+    document.getElementById('blockModalBg').classList.remove('open');
+}
+function confirmBlock(){
+  if(!_blockingSpot)return;
+  const note=document.getElementById('blockNote').value.trim();
+  state.assignments[_blockingSpot]={vehicle:null,vtype:null,driver:note,since:nowTime(),blocked:true};
+  document.getElementById('blockModalBg').classList.remove('open');
+  saveState();renderRegistry();render();
+}
+function blockSpot(sid){
+  state.assignments[sid]={vehicle:null,vtype:null,driver:'',since:nowTime(),blocked:true};
+  saveState();renderRegistry();render();
 }
 function closeModal(e){if(!e||e.target===document.getElementById('modalBg'))document.getElementById('modalBg').classList.remove('open');}
 function confirmAssign(){
@@ -417,7 +512,10 @@ function confirmAssign(){
     state.assignments[spot]={...state.assignments[moveFrom],since:nowTime()};
     delete state.assignments[moveFrom];
   } else {
-    if(!vehicleId){alert('Please select a vehicle.');return;}
+    if(!vehicleId){
+      document.getElementById('mVehicleErr').style.display='block';
+      return;
+    }
     const obj=state.trucks.find(t=>t.id===vehicleId);
     state.assignments[spot]={vehicle:vehicleId,vtype:obj?.type||'truck',driver,since:nowTime()};
   }
@@ -425,12 +523,38 @@ function confirmAssign(){
   saveState();renderRegistry();render();
 }
 function addZonePrompt(){
-  const name=prompt('Zone name:');if(!name)return;
-  const floor=prompt('Floor (Garage or Roof):','Roof')||'Roof';
-  const zid='z_'+Date.now();state.zones.push({id:zid,name,floor});
-  const count=parseInt(prompt('How many spots?')||'4');
+  document.getElementById('zoneModalBg').classList.add('open');
+  document.getElementById('zNewName').value='';
+  document.getElementById('zNewFloor').value='Roof';
+  document.getElementById('zNewCount').value='4';
+  setTimeout(()=>document.getElementById('zNewName').focus(),50);
+}
+function closeZoneModal(e){
+  if(!e||e.target===document.getElementById('zoneModalBg'))
+    document.getElementById('zoneModalBg').classList.remove('open');
+}
+function toggleAllowedType(zid,type){
+  const zone=state.zones.find(z=>z.id===zid);
+  if(!zone)return;
+  if(!zone.allowedTypes) zone.allowedTypes=['truck','sds','support','personal'];
+  const idx=zone.allowedTypes.indexOf(type);
+  if(idx>=0) zone.allowedTypes.splice(idx,1);
+  else zone.allowedTypes.push(type);
+  saveState();render();
+}
+
+function confirmAddZone(){
+  const name=document.getElementById('zNewName').value.trim();
+  const floor=document.getElementById('zNewFloor').value;
+  const count=parseInt(document.getElementById('zNewCount').value)||4;
+  const allowedTypes=['truck','sds','support','personal'].filter(t=>document.getElementById('zNewType_'+t)?.checked);
+  if(!name){alert('Please enter a zone name.');return;}
+  if(!allowedTypes.length){alert('Select at least one allowed vehicle type.');return;}
+  const zid='z_'+Date.now();
+  state.zones.push({id:zid,name,floor,allowedTypes});
   const prefix=name.replace(/\s+/g,'').slice(0,3);
-  for(let i=1;i<=count;i++)state.spots.push({id:prefix+i,zone:zid});
+  for(let i=1;i<=count;i++) state.spots.push({id:prefix+i,zone:zid});
+  document.getElementById('zoneModalBg').classList.remove('open');
   saveState();render();
 }
 
@@ -438,6 +562,7 @@ function render(){
   const q=document.getElementById('searchBox').value.toLowerCase();
   const fs=document.getElementById('filterStatus').value;
   const ft=document.getElementById('filterType').value;
+  const fz=document.getElementById('filterZone').value;
   const total=state.spots.length,occ=Object.keys(state.assignments).length;
   document.getElementById('stats').innerHTML=
     '<div class="stat"><div class="stat-label">Total spots</div><div class="stat-val">'+total+'</div></div>'+
@@ -451,6 +576,7 @@ function render(){
     if(!fzones.length)continue;
     html+='<div class="floor-label">'+floor+'</div>';
     for(const zone of fzones){
+      if(fz!=='all'&&zone.floor!==fz) continue;
       const zSpots=state.spots.filter(s=>s.zone===zone.id);
       const zOcc=zSpots.filter(s=>state.assignments[s.id]).length;
       const isEZ=state.editingZone===zone.id;
@@ -463,17 +589,27 @@ function render(){
         ?'<input class="zone-name-input" id="zname-'+zone.id+'" value="'+zone.name+'" onblur="saveZoneName(\''+zone.id+'\')" onkeydown="if(event.key===\'Enter\')saveZoneName(\''+zone.id+'\');if(event.key===\'Escape\'){state.editingZone=null;render();}">'
         :'<span class="zone-name-display" onclick="'+(editMode?'startEditZone(\''+zone.id+'\')':'')+'">'+zone.name+'</span>';
       const badge='<span class="zbadge '+zoneBadge(zone.name)+'">'+zone.floor+'</span>';
+      const allowed=zone.allowedTypes||['truck','sds','support','personal'];
+      const allowedPills=allowed.map(t=>'<span class="vtype-pill vtype-'+t+'">'+TYPE_LABELS[t]+'</span>').join('');
+      const allowedEditHtml=editMode
+        ?'<div class="type-check-row" style="margin-top:4px">'+
+          ['truck','sds','support','personal'].map(t=>
+            '<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer">'+
+            '<input type="checkbox" '+(allowed.includes(t)?'checked':'')+
+            ' onchange="toggleAllowedType(\''+zone.id+'\',\''+t+'\')"> '+TYPE_LABELS[t]+'</label>'
+          ).join('')+
+          '</div>'
+        :'';
+      const allowedSection='<div style="display:flex;flex-wrap:wrap;gap:3px;align-items:center;margin-top:4px">'+allowedPills+'</div>'+allowedEditHtml;
       const editControls=editMode?'<button class="icon-btn edit-only" onclick="addSpotToZone(\''+zone.id+'\')">+ spot</button><button class="icon-btn danger edit-only" onclick="deleteZone(\''+zone.id+'\')">x zone</button>':'';
       let spotsHtml='',visible=0;
       for(const spot of zSpots){
         const asgn=state.assignments[spot.id];
         const isOcc=!!asgn;
-        if(fs==='occupied'&&!isOcc) continue;
+        if(fs==='occupied'&&(!isOcc||asgn.blocked)) continue;
+        if(fs==='blocked'&&(!isOcc||!asgn.blocked)) continue;
         if(fs==='empty'&&isOcc) continue;
-        if(ft!=='all'){
-          if(!isOcc) continue;
-          if(asgn.vtype!==ft) continue;
-        }
+        if(ft!=='all'&&isOcc&&!asgn.blocked&&asgn.vtype!==ft) continue;
         const vid=asgn?.vehicle||'';
         const vdriver=asgn?.driver||'';
         if(q&&!spot.id.toLowerCase().includes(q)&&!vid.toLowerCase().includes(q)&&!vdriver.toLowerCase().includes(q)) continue;
@@ -482,7 +618,17 @@ function render(){
         const spotIdHtml=isES
           ?'<input class="spot-id-input" id="sname-'+spot.id+'" value="'+spot.id+'" onblur="saveSpotName(\''+spot.id+'\')" onkeydown="if(event.key===\'Enter\')saveSpotName(\''+spot.id+'\');if(event.key===\'Escape\'){state.editingSpot=null;render();}">'
           :'<span class="spot-id" onclick="'+(editMode?'startEditSpot(\''+spot.id+'\')':'')+'">'+spot.id+(editMode?' &#9998;':'')+'</span>';
-        if(isOcc){
+        if(isOcc && asgn.blocked){
+          spotsHtml+='<div class="spot blocked">'+
+            '<div class="spot-id-row">'+spotIdHtml+'</div>'+
+            '<div class="blocked-label">Blocked</div>'+
+            '<div class="blocked-note">'+(asgn.driver||'No note')+'</div>'+
+            '<div class="vehicle-time">Since '+asgn.since+'</div>'+
+            '<div class="spot-actions">'+
+              '<button class="spot-btn" onclick="removeAssignment(\''+spot.id+'\')">Unblock</button>'+
+              (editMode?'<button class="spot-btn danger edit-only" onclick="deleteSpot(\''+spot.id+'\')">Del</button>':'')+
+            '</div></div>';
+        } else if(isOcc){
           const [bg,fg]=vehicleColor(asgn.vtype);
           spotsHtml+='<div class="spot occupied">'+
             '<div class="spot-id-row">'+spotIdHtml+'</div>'+
@@ -499,17 +645,22 @@ function render(){
           spotsHtml+='<div class="spot empty '+(!editMode?'view-clickable':'')+'" onclick="'+(!editMode?'openAssignModal(\''+spot.id+'\')':'')+'" >'+
             '<div class="spot-id-row" onclick="event.stopPropagation()">'+spotIdHtml+'</div>'+
             '<div class="empty-label">'+(editMode?'Empty':'Click to assign')+'</div>'+
-            (editMode?'<div class="spot-actions"><button class="spot-btn danger edit-only" onclick="deleteSpot(\''+spot.id+'\')">Del</button></div>':'')+
+            (!editMode
+              ? '<div class="spot-actions" onclick="event.stopPropagation()"><button class="spot-btn" onclick="openBlockModal(\''+spot.id+'\')">Block</button></div>'
+              : '<div class="spot-actions"><button class="spot-btn danger edit-only" onclick="deleteSpot(\''+spot.id+'\')">Del</button></div>')+
             '</div>';
         }
       }
-      if(visible===0&&(q||ft!=='all')) continue;
+      if(visible===0) continue;
       html+='<div class="zone-wrap">'+
-        '<div class="zone-header">'+
-          imgEl+
-          '<div style="display:flex;align-items:center;gap:6px;flex:1">'+zoneNameHtml+badge+'</div>'+
-          '<div class="zone-right"><span class="zone-count">'+zOcc+'/'+zSpots.length+'</span>'+editControls+'</div>'+
-          '<div class="zone-tooltip">'+tooltipContent+'</div>'+
+        '<div class="zone-header" style="flex-direction:column;align-items:stretch">'+
+          '<div style="display:flex;align-items:center;gap:6px">'+
+            imgEl+
+            '<div style="display:flex;align-items:center;gap:6px;flex:1">'+zoneNameHtml+badge+'</div>'+
+            '<div class="zone-right"><span class="zone-count">'+zOcc+'/'+zSpots.length+'</span>'+editControls+'</div>'+
+            '<div class="zone-tooltip">'+tooltipContent+'</div>'+
+          '</div>'+
+          allowedSection+
         '</div>'+
         '<div class="spots">'+(spotsHtml||'<div style="padding:8px;font-size:12px;color:#888">No matching spots</div>')+'</div>'+
       '</div>';
